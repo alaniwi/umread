@@ -4,7 +4,10 @@ import numpy.ctypeslib
 import ctypes as CT
 
 import umfile
- 
+
+_len_real_hdr = 19
+_len_int_hdr = 45
+
 class File_type(CT.Structure):
     _fields_ = [("format", CT.c_int),
                 ("byte_ordering", CT.c_int),
@@ -40,7 +43,7 @@ class File(CT.Structure):
                 ("_internp", CT.c_void_p)]
 
 class Enum(object):
-    def __init__(self, names):
+    def __init__(self, *names):
         self.names = names
     def as_name(self, val):
         if isinstance(val, str):
@@ -53,8 +56,9 @@ class Enum(object):
         return self.index(val)
 
 
-enum_file_format = Enum(("PP", "FF"))
-enum_byte_ordering = Enum(("little_endian", "big_endian"))
+enum_file_format = Enum("PP", "FF")
+enum_byte_ordering = Enum("little_endian", "big_endian")
+enum_data_type = Enum("i", "r")
 
 class CInterface(object):
     """
@@ -135,27 +139,37 @@ class CInterface(object):
         else:
             raise ValueError("word size must be 4 or 8")            
 
-        ctypes_int_hdr = numpy.ctypeslib.ndpointer(dtype = self.file_data_int_type,
-                                                   shape = (45),
-                                                   flags=('C_CONTIGUOUS', 'WRITEABLE'))
-        
-        ctypes_real_hdr = numpy.ctypeslib.ndpointer(dtype = self.file_data_real_type,
-                                                    shape = (19),
-                                                    flags=('C_CONTIGUOUS', 'WRITEABLE'))
-        
-        Rec._fields_ = [("int_hdr", ctypes_int_hdr),
-                        ("real_hdr", ctypes_real_hdr),
-                        ("header_offset", CT.c_size_t),
-                        ("data_offset", CT.c_size_t),
-                        ("_internp", CT.c_void_p)]
+    def _get_ctypes_array(self, dtype, size=None):
+        """
+        get ctypes corresponding to a numpy array of a given type;
+        the size should not be necessary unless the storage for the array 
+        is allocated in the C code
+        """
+        kwargs = {'dtype': dtype,
+                  'ndim': 1,
+                  'flags': ('C_CONTIGUOUS', 'WRITEABLE')}
+        if size:
+            kwargs['shape'] = (size,)
+        return numpy.ctypeslib.ndpointer(**kwargs)
 
-        self.ctypes_int_data = numpy.ctypeslib.ndpointer(dtype = self.file_data_int_type,
-                                                         ndim = 1,
-                                                         flags=('C_CONTIGUOUS', 'WRITEABLE'))
+    def _get_ctypes_int_array(self, size=None):
+        return self._get_ctypes_array(self.file_data_int_type, size)
 
-        self.ctypes_real_data = numpy.ctypeslib.ndpointer(dtype = self.file_data_real_type,
-                                                          ndim = 1,
-                                                          flags=('C_CONTIGUOUS', 'WRITEABLE'))
+    def _get_ctypes_real_array(self, size=None):
+        return self._get_ctypes_array(self.file_data_real_type, size)
+    
+    def _get_empty_real_array(self, size):
+        """
+        get empty numpy real array according to word size previously 
+        set with set_word_size()
+        """
+        return numpy.empty(size, dtype = self.file_data_real_type)
+
+    def _get_empty_int_array(self, size):
+        """
+        as _get_empty_real_array but for int
+        """
+        return numpy.empty(size, dtype = self.file_data_int_type)
 
     def parse_file(self, fh, file_type):
         """
@@ -170,6 +184,11 @@ class CInterface(object):
         """
         func = self.lib.file_parse
         func.restype = CT.POINTER(File)
+        Rec._fields_ = [("int_hdr", self._get_ctypes_int_array(_len_int_hdr)),
+                        ("real_hdr", self._get_ctypes_real_array(_len_real_hdr)),
+                        ("header_offset", CT.c_size_t),
+                        ("data_offset", CT.c_size_t),
+                        ("_internp", CT.c_void_p)]
         file_p = func(fh, file_type)
         file = file_p.contents
         c_vars = file.vars[:file.nvars]
@@ -203,13 +222,54 @@ class CInterface(object):
         data_offset = c_rec.data_offset
         return umfile.Rec(int_hdr, real_hdr, header_offset, data_offset)
 
-    def get_nwords(self, int_hdr):
+    def get_type_and_length(self, int_hdr):
         """
-        from integer header, work out number of words to read
+        from integer header, work out data type and number of words to read
         (read_record_data requires this)
+
+        returns 2-tuple of:
+           data type: 'i' or 'f'
+           number of words
         """
         word_size = int_hdr.itemsize
-        return self.lib.get_nwords(word_size, numpy.ctypeslib.as_ctypes(int_hdr))
+        self.lib.get_nwords.argtypes = [ CT.c_int,
+                                         INTHDR
+                                         CT.POINTER(CT.c_int),
+                                         CT.POINTER(CT.size_t) ]
+        data_type = CT.c_int()
+        num_words = CT.c_size_t()
+        rv = self.get_type_and_length(word_size, int_hdr, CT.POINTER(data_type), CT.POINTER(num_words))
+        if rv != 0:
+            raise RuntimeError("error determining data type and size from integer header")
+        return enum_data_type.as_name(data_type.value), num_words.value
+
+    def read_header(self,
+                    fd, 
+                    header_offset,
+                    byte_ordering,
+                    word_size):
+        """
+        reads header from open file, returning as 2-tuple (int_hdr, real_hdr) of numpy arrays       
+        """
+        self.lib.read_header.argtypes = [ CT.c_int,
+                                          CT.c_size_t,
+                                          CT.c_int,
+                                          CT.c_int,
+                                          self._get_ctypes_int_array(),
+                                          self._get_ctypes_real_array()]
+        
+        int_hdr = self._get_empty_int_array(_len_int_hdr)
+        real_hdr = self._get_empty_real_array(_len_real_hdr)
+        rv = self.lib.read_header(fd,
+                                  header_offset,
+                                  enum_byte_ordering.as_index(byte_ordering),
+                                  word_size,
+                                  int_hdr,
+                                  real_hdr)
+        if rv != 0:
+            raise RuntimeError("error reading header data")
+        
+        return int_hdr, real_hdr
 
     def read_record_data(self,
                          fd,
@@ -238,36 +298,39 @@ class CInterface(object):
         """
         
         if data_is_int:
-            ctypes_data = self.ctypes_int_data
-            data = numpy.empty(nwords, dtype = self.file_data_int_type)
+            data = self._get_empty_int_array(nwords)
+            ctypes_data = self._get_ctypes_int_array()
         else:
-            ctypes_data = self.ctypes_real_data
-            data = numpy.empty(nwords, dtype = self.file_data_real_type)
+            data = self._get_empty_real_array(nwords)
+            ctypes_data = self._get_ctypes_real_array()
 
         self.lib.read_record_data.argtypes = [ CT.c_int,
                                                CT.c_size_t,
                                                CT.c_int,
                                                CT.c_int,
-                                               CT.c_void_p,
-                                               CT.c_void_p,
+                                               self._get_ctypes_int_array(),
+                                               self._get_ctypes_real_array(),
                                                CT.c_size_t,
                                                ctypes_data ]
-        self.lib.read_record_data(fd,
-                                  data_offset,
-                                  enum_byte_ordering.as_index(byte_ordering),
-                                  word_size,
-                                  numpy.ctypeslib.as_ctypes(int_hdr),
-                                  numpy.ctypeslib.as_ctypes(real_hdr),
-                                  nwords,
-                                  data)
 
+        rv = self.lib.read_record_data(fd,
+                                       data_offset,
+                                       enum_byte_ordering.as_index(byte_ordering),
+                                       word_size,
+                                       int_hdr,
+                                       real_hdr,
+                                       nwords,
+                                       data)
+
+        if rv != 0:
+            raise RuntimeError("error reading record data")
+        
         return data
 
 
 #FIXME:
-#add read_header method, and in the dummy C code (is in the header file)
 #add C method to parse int hdr and get data type (i.e. whether data is integer or real)
-
+#add C method to free memory
 
 if __name__ == "__main__":
     c = CInterface()
@@ -293,3 +356,9 @@ if __name__ == "__main__":
                                       rec.real_hdr,
                                       nwords)
             print data
+
+    print c.read_header(fd,
+                        info['vars'][0].recs[0].hdr_offset,
+                        file_type.byte_ordering,
+                        file_type.word_size)
+

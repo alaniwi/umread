@@ -10,6 +10,12 @@ typedef enum {
   big_endian
 } Byte_ordering;
 
+typedef enum {
+  int_type,
+  real_type
+} Data_type;
+
+
 struct _File;
 struct _Var;
 struct _Rec;
@@ -81,12 +87,12 @@ File *file_parse(int fd,
  * (although may call common code in the implementation)
  */
 
-void read_header(int fd,
-		 size_t header_offset,
-		 Byte_ordering byte_ordering, 
-		 int word_size, 
-		 void *int_hdr_rtn,
-		 void *real_hdr_rtn);
+int read_header(int fd,
+		size_t header_offset,
+		Byte_ordering byte_ordering, 
+		int word_size, 
+		void *int_hdr_rtn,
+		void *real_hdr_rtn);
 /*
   reads a PP header at specified offset; function will do byte-swapping
   as necessary, but returned header data will match word size, and 
@@ -95,12 +101,18 @@ void read_header(int fd,
 */
 
 
-size_t get_nwords(int word_size,
-		  const void *int_hdr);
+int get_type_and_length(int word_size,
+			const void *int_hdr,
+			Data_type *type_rtn,
+			size_t *num_words_rtn);
 /*
-  Parses integer PP header, returning number of data words.  Caller provides
-  integer header as array of 4 or 8 byte ints as appropriate to passed
-  word_size
+  Parses integer PP header, works out number of words and data type.
+
+  Caller provides integer header as array of 4 or 8 byte ints 
+  as appropriate to passed word_size, and provides storage for 
+  returned info.
+
+  Return value is 0 for success, otherwise 1.
  */
 
 int read_record_data(int fd, 

@@ -1,8 +1,9 @@
-#include "umfile.h"
-#include "umfileint.h"
-
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "umfile.h"
+#include "umfileint.h"
 
 typedef int myint;
 typedef float myfloat;
@@ -120,28 +121,24 @@ File *file_parse(int fd,
   return file_create_dummy(file_type);
 }
 
-void read_header(int fd,
-		 size_t header_offset,
-		 Byte_ordering byte_ordering, 
-		 int word_size, 
-		 void *int_hdr_rtn,
-		 void *real_hdr_rtn)
-{
-  // not implemented;
-}
 
-
-size_t get_nwords_dummy(const void *int_hdr)
+size_t get_type_and_length_dummy(const void *int_hdr, Data_type *type_rtn, size_t *num_words_rtn)
 {
   const myint *int_hdr_4 = int_hdr;
-  return int_hdr_4[0];
+  *num_words_rtn = int_hdr_4[0];
+  *type_rtn = real_type;
 }
 
-size_t get_nwords(int word_size,
-		  const void *int_hdr)
+int get_type_and_length(int word_size,
+			const void *int_hdr,
+			Data_type *type_rtn,
+			size_t *num_words_rtn)
 {
-  return get_nwords_dummy(int_hdr);
+  return get_type_and_length_dummy(int_hdr, 
+				   type_rtn,
+				   num_words_rtn);
 }
+
 
 
 void read_record_data_dummy(size_t nwords, 
@@ -151,7 +148,7 @@ void read_record_data_dummy(size_t nwords,
   myfloat *data_return_4 = data_return;
   for (i = 0; i < nwords; i++) {
     data_return_4[i] = i / 100.;    
-  }  
+  }
 } 
 
 int read_record_data(int fd, 
@@ -163,7 +160,50 @@ int read_record_data(int fd,
 		     size_t nwords, 
 		     void *data_return)
 {
+  int i;
+  assert(byte_ordering == little_endian);
+  assert(word_size == 4);
+
+  printf("start of int header seen in read_record_data_dummy():");
+  for (i = 0; i < 5; i++)
+    printf("  %d", ((int4 *) int_hdr)[i]);
+  printf("\n");
+  printf("start of int header seen in read_record_data_dummy():");
+  for (i = 0; i < 5; i++)
+    printf("  %f", ((real4 *) real_hdr)[i]);
+  printf("\n");
+
   read_record_data_dummy(nwords, data_return);
+  return 0;
+}
+
+
+void read_header_dummy(size_t header_offset, 
+		       void *int_hdr_rtn,
+		       void *real_hdr_rtn) 
+{
+  int4 *ihdr;
+  real4 *rhdr;
+  int i;
+  ihdr = int_hdr_rtn;
+  rhdr = real_hdr_rtn;
+  for (i = 0; i < 45; i++)
+    ihdr[i] = i + 1000 + header_offset;
+  for (i = 0; i < 19; i++)
+    rhdr[i] = i + 1000.1 + header_offset;
+} 
+
+int read_header(int fd,
+		size_t header_offset,
+		Byte_ordering byte_ordering, 
+		int word_size, 
+		void *int_hdr_rtn,
+		void *real_hdr_rtn) 
+{
+  assert(byte_ordering == little_endian);
+  assert(word_size == 4);
+
+  read_header_dummy(header_offset, int_hdr_rtn, real_hdr_rtn);
   return 0;
 }
 
@@ -178,7 +218,8 @@ int main()
   Rec *rec;
   myfloat *data;
   int word_size;
-  size_t nwords;
+  Data_type data_type;
+  size_t nwords, nbytes;
  
   fd = 3;
   detect_file_type(fd, &file_type);
@@ -203,9 +244,10 @@ int main()
 	    printf(" rhdr[%d] = %f\n", k, ((myfloat *)rec->real_hdr)[k]);
 
 	  word_size = file_type.word_size;
-	  nwords =  word_size * get_nwords(word_size, rec->int_hdr);
-	  printf("data (%d items)\n", nwords);
-	  data = xmalloc(nwords * sizeof(float));
+	  get_type_and_length(word_size, rec->int_hdr, &data_type, &nwords);
+	  nbytes = word_size * nwords;;
+	  printf("data (%ld items)\n", nwords);
+	  data = xmalloc(nbytes * sizeof(float));
 	  read_record_data(fd, 
 			   rec->data_offset,
 			   file_type.byte_ordering,
