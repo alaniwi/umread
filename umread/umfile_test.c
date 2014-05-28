@@ -122,11 +122,12 @@ File *file_parse(int fd,
 }
 
 
-size_t get_type_and_length_dummy(const void *int_hdr, Data_type *type_rtn, size_t *num_words_rtn)
+int get_type_and_length_dummy(const void *int_hdr, Data_type *type_rtn, size_t *num_words_rtn)
 {
   const myint *int_hdr_4 = int_hdr;
   *num_words_rtn = int_hdr_4[0];
   *type_rtn = real_type;
+  return 0;
 }
 
 int get_type_and_length(int word_size,
@@ -168,7 +169,7 @@ int read_record_data(int fd,
   for (i = 0; i < 5; i++)
     printf("  %d", ((int4 *) int_hdr)[i]);
   printf("\n");
-  printf("start of int header seen in read_record_data_dummy():");
+  printf("start of real header seen in read_record_data_dummy():");
   for (i = 0; i < 5; i++)
     printf("  %f", ((real4 *) real_hdr)[i]);
   printf("\n");

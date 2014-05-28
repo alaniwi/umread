@@ -58,7 +58,7 @@ class Enum(object):
 
 enum_file_format = Enum("PP", "FF")
 enum_byte_ordering = Enum("little_endian", "big_endian")
-enum_data_type = Enum("i", "r")
+enum_data_type = Enum("integer", "real")
 
 class CInterface(object):
     """
@@ -228,17 +228,20 @@ class CInterface(object):
         (read_record_data requires this)
 
         returns 2-tuple of:
-           data type: 'i' or 'f'
+           data type: 'integer' or 'real'
            number of words
         """
         word_size = int_hdr.itemsize
-        self.lib.get_nwords.argtypes = [ CT.c_int,
-                                         INTHDR
-                                         CT.POINTER(CT.c_int),
-                                         CT.POINTER(CT.size_t) ]
+        self.lib.get_type_and_length.argtypes = [ CT.c_int,
+                                                  self._get_ctypes_int_array(),
+                                                  CT.POINTER(CT.c_int),
+                                                  CT.POINTER(CT.c_size_t) ]
         data_type = CT.c_int()
         num_words = CT.c_size_t()
-        rv = self.get_type_and_length(word_size, int_hdr, CT.POINTER(data_type), CT.POINTER(num_words))
+        rv = self.lib.get_type_and_length(word_size, 
+                                          int_hdr, 
+                                          CT.pointer(data_type), 
+                                          CT.pointer(num_words))
         if rv != 0:
             raise RuntimeError("error determining data type and size from integer header")
         return enum_data_type.as_name(data_type.value), num_words.value
@@ -278,8 +281,8 @@ class CInterface(object):
                          word_size,
                          int_hdr,
                          real_hdr,
-                         nwords,
-                         data_is_int=False):
+                         data_type,
+                         nwords):
         """
         reads record data from open file
 
@@ -290,19 +293,19 @@ class CInterface(object):
            word_size - 4 or 8
            int_hdr - integer PP headers (numpy array)
            real_hdr - real PP headers (numpy array)
-           nwords - number of words to read, should have been returned by get_nwords()
-
-        optional input:
-          data_is_int: set True if data is integer, 
-                       otherwise data assumed to be real
+           data_type - 'integer' or 'real'
+           nwords - number of words to read
+              type and nwords should have been returned by get_type_and_length()
         """
         
-        if data_is_int:
+        if data_type == 'integer':
             data = self._get_empty_int_array(nwords)
             ctypes_data = self._get_ctypes_int_array()
-        else:
+        elif data_type == 'real':
             data = self._get_empty_real_array(nwords)
             ctypes_data = self._get_ctypes_real_array()
+        else:
+            raise ValueError("data_type must be 'integer' or 'real'")
 
         self.lib.read_record_data.argtypes = [ CT.c_int,
                                                CT.c_size_t,
@@ -329,7 +332,6 @@ class CInterface(object):
 
 
 #FIXME:
-#add C method to parse int hdr and get data type (i.e. whether data is integer or real)
 #add C method to free memory
 
 if __name__ == "__main__":
@@ -347,13 +349,15 @@ if __name__ == "__main__":
             print rec.data_offset
             print rec.int_hdr
             print rec.real_hdr
-            nwords = c.get_nwords(rec.int_hdr)
+            data_type, nwords = c.get_type_and_length(rec.int_hdr)
+            print "data_type = %s nwords = %s" % (data_type, nwords)
             data = c.read_record_data(fd,
                                       rec.data_offset,
                                       file_type.byte_ordering,
                                       file_type.word_size,
                                       rec.int_hdr,
                                       rec.real_hdr,
+                                      data_type, 
                                       nwords)
             print data
 
