@@ -183,7 +183,8 @@ class CInterface(object):
                                create_file_type()                               
         """
         func = self.lib.file_parse
-        func.restype = CT.POINTER(File)
+        file_p_type = CT.POINTER(File)
+        func.restype = file_p_type
         Rec._fields_ = [("int_hdr", self._get_ctypes_int_array(_len_int_hdr)),
                         ("real_hdr", self._get_ctypes_real_array(_len_real_hdr)),
                         ("header_offset", CT.c_size_t),
@@ -193,6 +194,11 @@ class CInterface(object):
         file = file_p.contents
         c_vars = file.vars[:file.nvars]
         rv = {'vars': map(self.c_var_to_py_var, c_vars)}
+        # now that we have copied all the data into python objects for the 
+        # caller, free any memory allocated in the C code before returning
+        free_func = self.lib.file_free
+        free_func._fields_ = file_p_type
+        free_func(file_p)
         return rv
 
     def c_var_to_py_var(self, c_var_p):
@@ -216,8 +222,10 @@ class CInterface(object):
         in the C code
         """
         c_rec = c_rec_p.contents
-        int_hdr = numpy.ctypeslib.as_array(c_rec.int_hdr)
-        real_hdr = numpy.ctypeslib.as_array(c_rec.real_hdr)
+        # numpy.copy used here so we can go back and free the memory allocated
+        # by C without affecting the python object
+        int_hdr = numpy.copy(numpy.ctypeslib.as_array(c_rec.int_hdr))
+        real_hdr = numpy.copy(numpy.ctypeslib.as_array(c_rec.real_hdr))
         header_offset = c_rec.header_offset
         data_offset = c_rec.data_offset
         return umfile.Rec(int_hdr, real_hdr, header_offset, data_offset)
@@ -273,6 +281,7 @@ class CInterface(object):
             raise RuntimeError("error reading header data")
         
         return int_hdr, real_hdr
+
 
     def read_record_data(self,
                          fd,
@@ -330,9 +339,6 @@ class CInterface(object):
         
         return data
 
-
-#FIXME:
-#add C method to free memory
 
 if __name__ == "__main__":
     c = CInterface()

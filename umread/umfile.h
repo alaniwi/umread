@@ -1,3 +1,10 @@
+/*
+ * ==============================================================
+ * Header file only for stuff intended to be called directly from
+ * python.  Everything else should be in umfileint.h.
+ * ==============================================================
+ */
+
 #include <stddef.h>
 
 typedef enum {
@@ -16,9 +23,14 @@ typedef enum {
 } Data_type;
 
 
+/* ---------------- 
+ * Placeholders for internal structures to be defined in umfileint.h
+ * Here just need to predeclare them so that we can have pointers to them.
+ */
 struct _File;
 struct _Var;
 struct _Rec;
+/* ---------------- */
 
 typedef struct {
   File_format format;
@@ -81,6 +93,12 @@ File *file_parse(int fd,
 /* commented out - to handle in Python */
 /* void close_fd(File *file); */
 /* int reopen_fd(File *file); */
+
+void file_free(File *file);
+/*
+ * Free memory associated with a File structure (including anything hung off
+ * the internal pointer) and all variables and records underneath it
+ */
 
 /* ------------------------------------------------------------------- */
 /* functions for reading the actual data, not dependent on the above objects 

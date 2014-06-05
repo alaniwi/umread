@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "umfile.h"
 #include "umfileint.h"
@@ -17,7 +18,15 @@ void *xmalloc(size_t size)
       fprintf(stderr, "malloc %ld failed\n", size);
       exit(1);
     }
+  memset(ptr, 0, size);
+  printf("xmalloc(%d) -> %p\n", size, ptr);
   return ptr;
+}
+
+void xfree(void *ptr)
+{
+  free(ptr);
+  printf("xfree(%p)\n", ptr);
 }
 
 File *file_alloc()
@@ -92,6 +101,82 @@ File *file_create_dummy(File_type file_type)
   return file;
 }
 
+/*===============================================*/
+
+void _rec_internals_free(Rec *rec)
+{  
+  struct _Rec *internals;
+  internals = rec->internp;
+  if (!internals)
+    return;
+  /* add code for freeing any pointers hung off internals */
+  xfree(internals);
+}
+
+void rec_free(Rec *rec)
+{
+  _rec_internals_free(rec);
+  {
+    myint *ihdr = rec->int_hdr;
+    myfloat *rhdr = rec->real_hdr;
+    printf("freeing rec with ihdr=%d %d... rhdr=%f %f...\n", 
+	   ihdr[0], ihdr[1], rhdr[0], rhdr[1]);
+  }
+  xfree(rec->int_hdr);
+  xfree(rec->real_hdr);
+  xfree(rec);
+}
+
+void _var_internals_free(Var *var)
+{  
+  struct _Var *internals;
+  internals = var->internp;
+  if (!internals)
+    return;
+  /* add code for freeing any pointers hung off internals */
+  xfree(internals);
+}
+
+void var_free(Var *var)
+{
+  int recid, nrecs;
+  _var_internals_free(var);
+  if (var->recs)
+    {
+      nrecs = var->nz * var->nt;
+      if (nrecs > 0)
+	for (recid = 0; recid < nrecs; recid++)
+	  rec_free(var->recs[recid]);
+      xfree(var->recs);
+    }
+  xfree(var);
+}
+
+void _file_internals_free(File *file)
+{
+  struct _File *internals;
+  internals = file->internp;
+  if (!internals)
+    return;
+  /* add code for freeing any pointers hung off internals */
+  xfree(internals);
+}
+
+void file_free(File *file)
+{
+  int varid;
+  _file_internals_free(file);
+  if (file->vars)
+    {
+      if (file->nvars > 0)
+	for (varid = 0; varid < file->nvars; varid++)
+	  var_free(file->vars[varid]);
+      xfree(file->vars);
+    }
+  xfree(file);
+}
+
+/*===============================================*/
 
 void populate_file_type_dummy(File_type *ft)
 {
@@ -147,9 +232,10 @@ void read_record_data_dummy(size_t nwords,
 {
   int i;
   myfloat *data_return_4 = data_return;
-  for (i = 0; i < nwords; i++) {
-    data_return_4[i] = i / 100.;    
-  }
+  for (i = 0; i < nwords; i++)
+    {
+      data_return_4[i] = i / 100.;    
+    }
 } 
 
 int read_record_data(int fd, 
@@ -259,7 +345,7 @@ int main()
 			   data);
 	  for (k = 0; k < nwords; k++)
 	    printf(" data[%d] = %f\n", k, data[k]);
-	  free(data);	  
+	  xfree(data);	  
 	}
     }
   return 0;
