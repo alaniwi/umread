@@ -53,7 +53,7 @@ class Enum(object):
     def as_index(self, val):
         if isinstance(val, int):
             return val
-        return self.index(val)
+        return self.names.index(val)
 
 
 enum_file_format = Enum("PP", "FF")
@@ -111,9 +111,9 @@ class CInterface(object):
         and returns a FileType object (ctypes structure containing integer
         values) that can be passed to file_parse()
         """
-        file_type = File_type(format = enum_file_format.as_index(format), 
-                              byte_ordering = enum_byte_ordering.as_index(byte_ordering), 
-                              word_size = word_size)
+        return File_type(format = enum_file_format.as_index(format), 
+                         byte_ordering = enum_byte_ordering.as_index(byte_ordering), 
+                         word_size = word_size)
 
     def set_word_size(self, val):
         """
@@ -137,7 +137,7 @@ class CInterface(object):
             self.file_data_int_type = numpy.int64
             self.file_data_real_type = numpy.float64
         else:
-            raise ValueError("word size must be 4 or 8")            
+            raise ValueError("word size must be 4 or 8 (not %s)" % word_size)
 
     def _get_ctypes_array(self, dtype, size=None):
         """
