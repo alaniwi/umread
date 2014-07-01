@@ -1,5 +1,4 @@
 import os
-import numpy
 
 import cInterface
 
@@ -23,7 +22,7 @@ class File(object):
         are ignored.
 
            byte_ordering: 'little_endian' or 'big_endian'
-           wordsize: 4 or 8
+           word_size: 4 or 8
            format:  'FF' or 'PP'
 
         The default action is to open the file, store the file type from the
