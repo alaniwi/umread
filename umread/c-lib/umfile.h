@@ -71,15 +71,6 @@ int detect_file_type(int fd, File_type *file_type_rtn);
    by the caller, otherwise returns 1.   
 */
 
-// void specify_file_type(File_format format,
-// 		       Byte_ordering byte_ordering,
-// 		       int word_size,
-// 		       File_type *file_type_rtn);
-// /* 
-//    Populates the File_type structure using the other arguments passed.
-// */
-// 
-
 File *file_parse(int fd,
 		 File_type file_type);
 /* 
