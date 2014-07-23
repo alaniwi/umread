@@ -190,6 +190,7 @@ class CInterface(object):
                         ("real_hdr", self._get_ctypes_real_array(_len_real_hdr)),
                         ("header_offset", CT.c_size_t),
                         ("data_offset", CT.c_size_t),
+                        ("disk_length", CT.c_size_t),
                         ("_internp", CT.c_void_p)]
         file_p = func(fh, file_type)
         file = file_p.contents
@@ -229,7 +230,8 @@ class CInterface(object):
         real_hdr = numpy.copy(numpy.ctypeslib.as_array(c_rec.real_hdr))
         header_offset = c_rec.header_offset
         data_offset = c_rec.data_offset
-        return umfile.Rec(int_hdr, real_hdr, header_offset, data_offset)
+        disk_length = c_rec.disk_length
+        return umfile.Rec(int_hdr, real_hdr, header_offset, data_offset, disk_length)
 
     def get_type_and_length(self, int_hdr):
         """
@@ -287,6 +289,7 @@ class CInterface(object):
     def read_record_data(self,
                          fd,
                          data_offset,
+                         disk_length, 
                          byte_ordering, 
                          word_size,
                          int_hdr,
@@ -299,6 +302,7 @@ class CInterface(object):
         inputs:
            fd - integer low-level file descriptor
            data_offset - offset in words
+           disk_length - disk length of data record in words
            byte_ordering - 'little_endian' or 'big_endian'
            word_size - 4 or 8
            int_hdr - integer PP headers (numpy array)

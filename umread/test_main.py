@@ -40,6 +40,7 @@ class Rec(CT.Structure):
                 ("real_hdr", ctypes_real_hdr),
                 ("header_offset", CT.c_size_t),
                 ("data_offset", CT.c_size_t),
+                ("disk_length", CT.c_size_t),
                 ("_internp", CT.c_void_p)]
 
 class Var(CT.Structure):
@@ -93,6 +94,7 @@ for varid in range(file.contents.nvars):
         data = numpy.empty(nwords, dtype = my_float_type_numpy)
         mylib.read_record_data(fd,
                                rec.contents.data_offset,
+                               rec.contents.disk_length,
                                file_type.byte_ordering,
                                file_type.word_size,
                                rec.contents.int_hdr,

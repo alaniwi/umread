@@ -32,50 +32,60 @@ struct _Var;
 struct _Rec;
 /* ---------------- */
 
-typedef struct {
+typedef struct 
+{
   File_format format;
   Byte_ordering byte_ordering;
   int word_size;
-} File_type ;
+}
+  File_type ;
 
-typedef struct {
+typedef struct 
+{
   void *int_hdr;
   void *real_hdr;
-  size_t header_offset;  /* in words */
-  size_t data_offset;  /* in words */
+  size_t header_offset;  /* in bytes */
+  size_t data_offset;  /* in bytes */
+  size_t disk_length;  /* in bytes */
   struct _Rec *internp;
-} Rec;
+}
+  Rec;
 
-typedef struct {
+typedef struct 
+{
   Rec **recs;
   int nz;
   int nt;
   int supervar_index;
   struct _Var *internp;
-} Var;
+}
+  Var;
 
-typedef struct {
+typedef struct 
+{
   int fd;
   File_type file_type;
   int nvars;
   Var **vars;
   struct _File *internp;
-} File;
+}
+  File;
 
 /* ------------------------------------------------------------------- */
 
 int detect_file_type(int fd, File_type *file_type_rtn);
 /* 
-   Given an open file, detect type of file (caller provides storage for info returned).
-   if detection was successful, returns 0 and populates the File_type structure provided 
-   by the caller, otherwise returns 1.   
+   Given an open file, detect type of file (caller provides storage for info
+   returned).  if detection was successful, returns 0 and populates the
+   File_type structure provided by the caller, otherwise returns 1.
 */
 
 File *file_parse(int fd,
 		 File_type file_type);
 /* 
-   Given an open file handle, parse a file into a File structure, with embedded 
-   Var and Rec structures, relating the PP records to variables within the file.
+   Given an open file handle, parse a file into a File structure, with
+   embedded Var and Rec structures, relating the PP records to variables
+   within the file.
 
    Caller should pass a File_type structure as either returned from
    detect_file_type() or populated by the caller.
@@ -126,6 +136,7 @@ int get_type_and_length(int word_size,
 
 int read_record_data(int fd, 
 		     size_t data_offset, 
+		     size_t disk_length, 
 		     Byte_ordering byte_ordering, 
 		     int word_size, 
 		     const void *int_hdr,
