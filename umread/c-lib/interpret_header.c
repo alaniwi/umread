@@ -1,5 +1,4 @@
 #include "umfileint.h"
-#include "datatype.h"
 
 Data_type WITH_LEN(get_type)(const INTEGER *int_hdr)
 {

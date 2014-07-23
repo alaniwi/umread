@@ -1,5 +1,10 @@
-TYPE_DEP_HDRS=protos_sgl.h protos_dbl.h
-HEADERS=umfile.h umfileint.h datatype.h $(TYPE_DEP_HDRS)
+TYPE_DEP_HDRS=bits/protos_sgl.h bits/protos_dbl.h
+HEADERS=umfile.h umfileint.h \
+	bits/datatype.h  bits/err_macros.h  bits/ordering.h  bits/pp_header.h  \
+	bits/type_dep_protos.h  bits/type_indep_protos.h  bits/typedefs.h \
+	$(TYPE_DEP_HDRS)
+
+
 LIBRARY=umfile_test.so
 
 CC=gcc
@@ -30,10 +35,10 @@ $(LIBRARY): $(OBJS)
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $<
 
-protos_sgl.h: type_dep_protos.h
+bits/protos_sgl.h: bits/type_dep_protos.h
 	$(CPP) -DBUILD_HDR -DSINGLE $< > $@
 
-protos_dbl.h: type_dep_protos.h
+bits/protos_dbl.h: bits/type_dep_protos.h
 	$(CPP) -DBUILD_HDR -DDOUBLE $< > $@
 
 %_dbl.o: %.c $(HEADERS)

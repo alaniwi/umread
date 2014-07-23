@@ -14,6 +14,4 @@
 #define COMPILED_TYPE  (single_precision)
 #define WORD_SIZE 4
 
-#else
-#error Need to compile this file with -DSINGLE or -DDOUBLE
 #endif

@@ -1,5 +1,4 @@
 #include "umfileint.h"
-#include "datatype.h"
 
 void WITH_LEN(debug_dump_all_headers)(File *file)
 {

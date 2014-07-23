@@ -7,20 +7,26 @@
 
 #include <stddef.h>
 
-typedef enum {
+typedef enum 
+{
   plain_pp,
   fields_file
-} File_format;
+} 
+  File_format;
 
-typedef enum {
+typedef enum 
+{
   little_endian,
   big_endian
-} Byte_ordering;
+} 
+  Byte_ordering;
 
-typedef enum {
+typedef enum 
+{
   int_type,
   real_type
-} Data_type;
+} 
+  Data_type;
 
 
 /* ---------------- 

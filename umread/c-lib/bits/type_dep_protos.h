@@ -60,6 +60,8 @@ int WITH_LEN(get_valid_records_ff)(int fd,
 /* process_vars.c */
 int WITH_LEN(process_vars)(File *file, List *heaplist);
 
+/* debug_dump.c */
+void WITH_LEN(debug_dump_all_headers)(File *file);
 
 #ifdef MAIN
 int WITH_LEN(main)();

@@ -1,7 +1,6 @@
 #include <unistd.h>
 
 #include "umfileint.h"
-#include "datatype.h"
 
 
 #define file_pos(f) (lseek(f, 0, SEEK_CUR))
