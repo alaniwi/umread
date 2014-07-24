@@ -147,7 +147,7 @@ int8 gregorian_to_secs(const Date *date)
 }
 
 
-int time_set(Time *time, Rec *rec)
+int time_set(Time *time, const Rec *rec)
 {
   time->type    = LOOKUP(rec, INDEX_LBTIM);
   

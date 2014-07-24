@@ -60,7 +60,9 @@ int get_valid_records_ff(int fd,
 /* process_vars.c */
 int process_vars(File *file, List *heaplist);
 int initialise_records(Rec **recs, int nrec, List *heaplist);
-int lev_set(Level *lev, Rec *rec);
+
+/* level.c */
+int lev_set(Level *lev, const Rec *rec);
 Lev_type level_type(const Rec *rec);
 
 /* date_and_time.c */
@@ -70,7 +72,20 @@ REAL time_diff(INTEGER lbtim, const Date *date, const Date *orig_date);
 REAL sec_to_day(int8 seconds);
 Calendar_type calendar_type(INTEGER type);
 int8 gregorian_to_secs(const Date *date);
-int time_set(Time *time, Rec *rec);
+int time_set(Time *time, const Rec *rec);
+
+/* compare.c */
+int compare_records_between_vars(const Rec *a, const Rec *b);
+int compare_mean_periods(const Rec *a, const Rec *b);
+int compare_records_within_var(const Rec *a, const Rec *b);
+int compare_records(const void *p1, const void *p2);
+int records_from_different_vars(const Rec *a, const Rec *b);
+int compare_lists(const List *l1, const List *l2, int (*compfunc)(const void*, const void*));
+int compare_levels(const void *p1, const void *p2);
+int compare_zaxes(const void *p1, const void *p2);
+int compare_times(const void *p1, const void *p2);
+int compare_dates(const Date *a, const Date *b);
+int compare_taxes(const void *p1, const void *p2);
 
 
 /* Debug_dump.c */
