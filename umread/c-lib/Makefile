@@ -1,9 +1,4 @@
-TYPE_DEP_HDRS=bits/protos_sgl.h bits/protos_dbl.h
-HEADERS=umfile.h umfileint.h \
-	bits/datatype.h  bits/err_macros.h  bits/ordering.h  bits/pp_header.h  \
-	bits/type_dep_protos.h  bits/type_indep_protos.h  bits/typedefs.h \
-	$(TYPE_DEP_HDRS)
-
+HEADERS=umfile.h umfileint.h bits/*.h
 
 LIBRARY=umfile_test.so
 
@@ -12,37 +7,34 @@ CFLAGS=-Wall -fPIC
 CPP=gcc -E -P
 LD=ld
 LDFLAGS=-shared
-TYPE_INDEP_OBJS= \
-	umfile.o error.o filetype.o umfile_test.o \
+OBJS = umfile.o error.o filetype.o umfile_test.o \
 	malloc.o linklist.o new_structs.o
-TYPE_DEP_OBJ_STEMS=umfile_test_typedep interpret_header read process_vars \
-	           debug_dump date_and_time
 
-SGL_OBJS=$(foreach stem, $(TYPE_DEP_OBJ_STEMS), $(stem)_sgl.o)
-DBL_OBJS=$(foreach stem, $(TYPE_DEP_OBJ_STEMS), $(stem)_dbl.o)
-OBJS=$(TYPE_INDEP_OBJS) $(SGL_OBJS) $(DBL_OBJS)
+TYPE_DEP_LIBRARY = umfile_typedep.a
+TYPE_DEP_DIR = type-dep
+TYPE_DEP_LIBRARY_PATH = $(TYPE_DEP_DIR)/$(TYPE_DEP_LIBRARY)
 
-.PHONY: clean all
+export CC CFLAGS CPP TYPE_DEP_LIBRARY
+
+.PHONY: clean all type-dep
 
 all: $(LIBRARY)
 
 clean:
-	rm -f $(OBJS) $(TYPE_DEP_HDRS)
+	rm -f $(OBJS)
+	$(MAKE) -C $(TYPE_DEP_DIR) clean
 
-$(LIBRARY): $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $(OBJS)
+type-dep:
+	$(MAKE) -C $(TYPE_DEP_DIR)
+
+$(LIBRARY): $(OBJS) type-dep
+	$(LD) $(LDFLAGS) -o $@ $(OBJS) --whole-archive $(TYPE_DEP_LIBRARY_PATH)
 
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $<
 
-bits/protos_sgl.h: bits/type_dep_protos.h
-	$(CPP) -DBUILD_HDR -DSINGLE $< > $@
-
-bits/protos_dbl.h: bits/type_dep_protos.h
-	$(CPP) -DBUILD_HDR -DDOUBLE $< > $@
-
-%_dbl.o: %.c $(HEADERS)
-	$(CC) $(CFLAGS) -c -DDOUBLE -o $@ $<
-
-%_sgl.o: %.c $(HEADERS)
-	$(CC) $(CFLAGS) -c -DSINGLE -o $@ $<
+#bits/protos_sgl.h: bits/type_dep_protos.h
+#	$(CPP) -DBUILD_HDR -DSINGLE $< > $@
+#
+#bits/protos_dbl.h: bits/type_dep_protos.h
+#	$(CPP) -DBUILD_HDR -DDOUBLE $< > $@

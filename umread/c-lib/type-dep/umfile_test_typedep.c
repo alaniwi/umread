@@ -7,7 +7,7 @@
 
 #include "umfileint.h"
 
-//Rec *WITH_LEN(rec_alloc)()
+//Rec *rec_alloc()
 //{
 //  Rec *rec;
 //  rec = xmalloc(sizeof(Rec));
@@ -17,7 +17,7 @@
 //  return rec;
 //}
 //
-//void WITH_LEN(rec_free)(Rec *rec)
+//void rec_free(Rec *rec)
 //{
 //  _rec_internals_free(rec);
 //  {
@@ -32,11 +32,11 @@
 //}
 //
 //
-//Rec *WITH_LEN(rec_create_dummy)(int k)
+//Rec *rec_create_dummy(int k)
 //{
 //  int i;
 //  Rec *rec;
-//  rec = WITH_LEN(rec_alloc)();
+//  rec = rec_alloc();
 //  for (i = 0; i < 45 ; i++)
 //    ((INTEGER *)rec->int_hdr)[i] = k * 100 + i;
 //  for (i = 0; i < 19 ; i++)
@@ -47,7 +47,7 @@
 //  return rec;
 //}
 //
-//int WITH_LEN(get_type_and_length_dummy)(const void *int_hdr, Data_type *type_rtn, size_t *num_words_rtn)
+//int get_type_and_length_dummy(const void *int_hdr, Data_type *type_rtn, size_t *num_words_rtn)
 //{
 //  const INTEGER *int_hdr_4 = int_hdr;
 //  *num_words_rtn = int_hdr_4[0];
@@ -55,7 +55,7 @@
 //  return 0;
 //}
 //
-void WITH_LEN(read_record_data_dummy)(size_t nwords, 
+void read_record_data_dummy(size_t nwords, 
 				       void *data_return)
 {
   int i;
@@ -67,15 +67,15 @@ void WITH_LEN(read_record_data_dummy)(size_t nwords,
 } 
 
 
-int WITH_LEN(read_record_data)(int fd, 
-			       size_t data_offset, 
-			       size_t disk_length,
-			       Byte_ordering byte_ordering, 
-			       int word_size, 
-			       const void *int_hdr,
-			       const void *real_hdr,
-			       size_t nwords, 
-			       void *data_return)
+int read_record_data_core(int fd, 
+				    size_t data_offset, 
+				    size_t disk_length,
+				    Byte_ordering byte_ordering, 
+				    int word_size, 
+				    const void *int_hdr,
+				    const void *real_hdr,
+				    size_t nwords, 
+				    void *data_return)
 {
   int i;
   assert(byte_ordering == little_endian);
@@ -90,13 +90,13 @@ int WITH_LEN(read_record_data)(int fd,
     printf("  %f", ((REAL *) real_hdr)[i]);
   printf("\n");
 
-  WITH_LEN(read_record_data_dummy)(nwords, data_return);
+  read_record_data_dummy(nwords, data_return);
   return 0;
 }
 
 
 #ifdef MAIN
-int WITH_LEN(main)()
+int main()
 {
   int i, j, k, nrec;
   int fd;

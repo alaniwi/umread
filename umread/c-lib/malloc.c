@@ -74,8 +74,7 @@ void *malloc_(size_t size, List *heaplist){
     }
 
   return ptr;
-
-  ERRBLKP("malloc_");
+  ERRBLKP;
 }
 
 
@@ -86,8 +85,7 @@ void *dup_(const void *inptr, size_t size, List *heaplist)
   CKP(   outptr = malloc_(size, heaplist)   );
   memcpy(outptr, inptr, size);
   return outptr;
-
-  ERRBLKP("dup_");
+  ERRBLKP;
 }
 
 
@@ -111,8 +109,7 @@ int free_(void *ptr, List *heaplist)
     CKI(  list_del_by_listel(heaplist, el, NULL)  );
 
   return 0;
-
-  ERRBLKI("free_");
+  ERRBLKI;
 }
 
 

@@ -191,8 +191,8 @@ int read_record_data(int fd,
 		     size_t nwords, 
 		     void *data_return)
 {
-  return read_record_data_sgl(fd, data_offset, disk_length, byte_ordering, word_size,
-			      int_hdr, real_hdr, nwords, data_return);
+  return read_record_data_core_sgl(fd, data_offset, disk_length, byte_ordering, word_size,
+				   int_hdr, real_hdr, nwords, data_return);
 }
 
 

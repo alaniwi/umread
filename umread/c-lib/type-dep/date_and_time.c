@@ -1,3 +1,5 @@
+#include "umfileint.h"
+
 /*
  * Aside from the time_set() function, most of the infrastructure in this file 
  * is for the purpose of calculating the length of the time mean period, just so
@@ -5,30 +7,30 @@
  * different variables.
  */
 
-REAL WITH_LEN(mean_period)(const Time *time) 
+REAL mean_period(const Time *time) 
 {
   /* returns the averaging period in days, or 0. if it is not a mean field */
   INTEGER lbtim = time->type;
-  if (!WITH_LEN(is_time_mean)(lbtim)) 
+  if (!is_time_mean(lbtim)) 
     return 0.;
-  return WITH_LEN(time_diff)(lbtim, &time->time2, &time->time1);
+  return time_diff(lbtim, &time->time2, &time->time1);
 }
 
-int WITH_LEN(is_time_mean)(INTEGER LBTIM) 
+int is_time_mean(INTEGER LBTIM) 
 {
   int ib;
   ib = (LBTIM / 10) % 10;
   return (ib == 2) || (ib == 3);
 }
 
-REAL WITH_LEN(time_diff)(INTEGER lbtim, const Date *date, const Date *orig_date)
+REAL time_diff(INTEGER lbtim, const Date *date, const Date *orig_date)
 {
   int8 secs;
 
-  switch(WITH_LEN(calendar_type)(lbtim))
+  switch(calendar_type(lbtim))
     {
     case gregorian:
-      return WITH_LEN(sec_to_day)(WITH_LEN(gregorian_to_secs)(date) - WITH_LEN(gregorian_to_secs)(orig_date));
+      return sec_to_day(gregorian_to_secs(date) - gregorian_to_secs(orig_date));
       break; /* notreached */
     case cal360day:
       secs =
@@ -39,7 +41,7 @@ REAL WITH_LEN(time_diff)(INTEGER lbtim, const Date *date, const Date *orig_date)
 			  30 * (date->month - orig_date->month +
 				12 * (int8) (date->year - orig_date->year) ))));
       
-      return WITH_LEN(sec_to_day)(secs);
+      return sec_to_day(secs);
       break; /* notreached */
     case model:
       secs =
@@ -48,16 +50,16 @@ REAL WITH_LEN(time_diff)(INTEGER lbtim, const Date *date, const Date *orig_date)
 	      60 * (date->hour - orig_date->hour + 
 		    24 * (int8) (date->day - orig_date->day)));
       
-      return WITH_LEN(sec_to_day)(secs);
+      return sec_to_day(secs);
       break; /* notreached */
     default:
       switch_bug("time_diff");
       ERR;
     }  
-  ERRBLKF("time_diff");
+  ERRBLKF;
 }
 
-REAL WITH_LEN(sec_to_day)(int8 seconds)
+REAL sec_to_day(int8 seconds)
 {
   /* convert seconds to days, avoiding rounding where possible 
    * by using integer arithmetic for the whole days
@@ -71,7 +73,7 @@ REAL WITH_LEN(sec_to_day)(int8 seconds)
   return days + remainder / (REAL) secs_per_day;
 }
 
-Calendar_type WITH_LEN(calendar_type)(INTEGER type)
+Calendar_type calendar_type(INTEGER type)
 {
   switch(type % 10)
     {
@@ -94,10 +96,10 @@ Calendar_type WITH_LEN(calendar_type)(INTEGER type)
   /* on error return -1 (though only useful to calling routine if stored in an int
    * not a Calendar_type)
    */
-  ERRBLKI("calendar_type");
+  ERRBLKI;
 }
 
-int8 WITH_LEN(gregorian_to_secs)(const Date *date)
+int8 gregorian_to_secs(const Date *date)
 {
   /* Convert from Gregorian calendar to seconds since a fixed origin
    * 
@@ -145,7 +147,7 @@ int8 WITH_LEN(gregorian_to_secs)(const Date *date)
 }
 
 
-int WITH_LEN(time_set)(Time *time, Rec *rec)
+int time_set(Time *time, Rec *rec)
 {
   time->type    = LOOKUP(rec, INDEX_LBTIM);
   

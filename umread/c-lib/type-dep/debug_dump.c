@@ -1,6 +1,6 @@
 #include "umfileint.h"
 
-void WITH_LEN(debug_dump_all_headers)(File *file)
+void debug_dump_all_headers(File *file)
 {
   int irec;
   Rec *rec;

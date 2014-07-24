@@ -9,8 +9,7 @@
  * CKP used for pointer functions which return NULL on failure
  * CKF for floats for good measure (probably not used)
  *
- * put the ERRBLK (or ERRBLKI or ERRBLKP) at the end of the subroutine, with 
- * the "label" argument set to the subroutine name (as a string)
+ * put the ERRBLK (or ERRBLKI or ERRBLKP) at the end of the subroutine
  */
 
 #define FLT_ERR -1e38
@@ -29,7 +28,8 @@
 /* ERRIF: conditional branch */
 #define ERRIF(i) if (i){ ERR }
 
-#define ERRBLK(label, rtn) err: error(label); return (rtn);
-#define ERRBLKI(label) ERRBLK((label), -1);
-#define ERRBLKP(label) ERRBLK((label), NULL);
-#define ERRBLKF(label) ERRBLK((label), FLT_ERR);
+#define GRIPE gripe(__func__);
+#define ERRBLK(rtn) err: GRIPE; return (rtn);
+#define ERRBLKI ERRBLK(-1);
+#define ERRBLKP ERRBLK(NULL);
+#define ERRBLKF ERRBLK(FLT_ERR);

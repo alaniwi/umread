@@ -70,6 +70,13 @@ class CInterface(object):
         lib_path = os.path.join(lib_dir, lib_name)
         print lib_path
         self.lib = CT.CDLL(lib_path)
+
+    def _is_null_pointer(self, ptr):
+        try:
+            ptr.contents
+            return False
+        except ValueError:
+            return True
     
     def detect_file_type(self, fd):
         """
@@ -80,7 +87,7 @@ class CInterface(object):
         file_type = File_type()
         rv = self.lib.detect_file_type(fd, CT.pointer(file_type))
         if rv != 0:
-            raise RuntimeError("File type could not be detected")
+            raise umfile.UMFileException("File type could not be detected")
         return file_type
 
     def file_type_obj_to_dict(self, file_type):
@@ -193,6 +200,9 @@ class CInterface(object):
                         ("disk_length", CT.c_size_t),
                         ("_internp", CT.c_void_p)]
         file_p = func(fh, file_type)
+        print file_p, type(file_p), dir(file_p)
+        if self._is_null_pointer(file_p):
+            raise umfile.UMFileException("file parsing failed")
         file = file_p.contents
         c_vars = file.vars[:file.nvars]
         rv = {'vars': map(self.c_var_to_py_var, c_vars)}
@@ -254,7 +264,7 @@ class CInterface(object):
                                           CT.pointer(data_type), 
                                           CT.pointer(num_words))
         if rv != 0:
-            raise RuntimeError("error determining data type and size from integer header")
+            raise umfile.UMFileException("error determining data type and size from integer header")
         return enum_data_type.as_name(data_type.value), num_words.value
 
     def read_header(self,
@@ -281,7 +291,7 @@ class CInterface(object):
                                   int_hdr,
                                   real_hdr)
         if rv != 0:
-            raise RuntimeError("error reading header data")
+            raise umfile.UMFileException("error reading header data")
         
         return int_hdr, real_hdr
 
@@ -340,7 +350,7 @@ class CInterface(object):
                                        data)
 
         if rv != 0:
-            raise RuntimeError("error reading record data")
+            raise UMFileException("error reading record data")
         
         return data
 

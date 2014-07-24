@@ -7,7 +7,7 @@ static FILE *output = NULL;
 
 static int verbose;
 
-static const int do_debug = 1;
+static const int do_debug = 0;
 
 void switch_bug(const char *routine)
 {
@@ -15,7 +15,7 @@ void switch_bug(const char *routine)
 	"may indicate coding bug in umfile or unexpected header value");
 }
 
-void error(const char *routine)
+void gripe(const char *routine)
 {
   if (verbose || do_debug)
     {
@@ -55,7 +55,6 @@ void debug(const char *fmt, ...)
       va_end(args);
       fflush(output);
     }
-  verbose = 0;
 }
 
 void errorhandle_init()
@@ -66,6 +65,5 @@ void errorhandle_init()
    */
   verbose = 1;
   if (output == NULL)
-    //output = fopen("/dev/tty", "w");
-    output = stdout;
+    output = stderr;
 }

@@ -2,7 +2,7 @@
 
 /* error.c */
 void switch_bug(const char *routine);
-void error(const char *routine);
+void gripe(const char *routine);
 void error_mesg(const char *routine, const char *fmt, ...);
 void debug(const char *fmt, ...);
 void errorhandle_init();

@@ -12,9 +12,9 @@ int get_type_and_length(int word_size,
   switch (word_size)
     {
     case 4:
-      return get_type_and_length_sgl(int_hdr, type_rtn, num_words_rtn);
+      return get_type_and_length_core_sgl(int_hdr, type_rtn, num_words_rtn);
     case 8:
-      return get_type_and_length_dbl(int_hdr, type_rtn, num_words_rtn);
+      return get_type_and_length_core_dbl(int_hdr, type_rtn, num_words_rtn);
     default:
       return -1;
     }
@@ -38,11 +38,11 @@ int read_header(int fd,
   switch (word_size)
     {
     case 4:
-      return read_header_at_offset_sgl(fd, header_offset, byte_ordering, 
-				       int_hdr_rtn, real_hdr_rtn);
+      return read_hdr_at_offset_sgl(fd, header_offset, byte_ordering, 
+				    int_hdr_rtn, real_hdr_rtn);
     case 8:
-      return read_header_at_offset_dbl(fd, header_offset, byte_ordering, 
-				       int_hdr_rtn, real_hdr_rtn);
+      return read_hdr_at_offset_dbl(fd, header_offset, byte_ordering, 
+				    int_hdr_rtn, real_hdr_rtn);
     default:
       return -1;
     }
@@ -53,37 +53,22 @@ File *file_parse(int fd,
 		 File_type file_type)
 {
   File *file;
-  List *heaplist;
 
   errorhandle_init();
-
-  CKP(  file = new_file()  );
-  file->fd = fd;
-  file->file_type = file_type;
-
-  heaplist = file->internp->heaplist;
 
   switch (file_type.word_size)
     {
     case 4:
-      CKI(  read_all_headers_sgl(file, heaplist)  );
-      debug_dump_all_headers_sgl(file);
-      CKI(  process_vars_sgl(file, heaplist)  );
+      CKP(  file = file_parse_core_sgl(fd, file_type)  );
       break;
     case 8:
-      CKI(  read_all_headers_dbl(file, heaplist)  );
-      debug_dump_all_headers_dbl(file);
-      CKI(  process_vars_dbl(file, heaplist)  );
+      CKP(  file = file_parse_core_dbl(fd, file_type)  );
       break;
     default:
       ERR;
     }
   return file;
-
- err:
-  if (file)
-    free_file(file);
-  return NULL;
+  ERRBLKP;
 }
 
 
@@ -95,5 +80,5 @@ void file_free(File *file)
   return;
 
  err:
-  error("free_file");
+  GRIPE;
 }

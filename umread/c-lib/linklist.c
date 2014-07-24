@@ -10,8 +10,7 @@ void *list_new(List *heaplist)
   list->last = NULL;
   list->n = 0;
   return list;
-
-  ERRBLKP("list_new");
+  ERRBLKP;
 }
 
 /* This function frees a list; 
@@ -34,8 +33,7 @@ int list_free(List *list, int free_ptrs, List *heaplist)
     }
   CKI(  free_(list, heaplist)  );
   return 0;
-
-  ERRBLKI("list_free");
+  ERRBLKI;
 }
 
 
@@ -43,8 +41,7 @@ int list_size(const List *list)
 {
   CKP(list);
   return list->n;
-
-  ERRBLKI("list_size");
+  ERRBLKI;
 }
 
 
@@ -68,8 +65,7 @@ int list_add(List *list, void *ptr, List *heaplist)
       list->last = el;
     }
   return 0;
-
-  ERRBLKI("list_add");
+  ERRBLKI;
 }
 
 /* list_add_or_find takes a pointer to an item and tries to find it on the
@@ -120,8 +116,7 @@ int list_add_or_find(List *list,
 	*index_return = list_size(list) - 1;
       return 1;
     }
-
-  ERRBLKI("list_add_or_find");
+  ERRBLKI;
 }
 
 
@@ -142,7 +137,7 @@ int list_del(List *list, void *ptr, List *heaplist)
   /* if what we're trying to remove is not found, fall through
    * to error exit
    */
-  ERRBLKI("list_del");
+  ERRBLKI;
 }
 
 
@@ -158,8 +153,7 @@ int list_del_by_listel(List *list, List_element *p, List *heaplist)
   CKI(  free_(p, heaplist)  );
   list->n --;
   return 0;
-
-  ERRBLKI("list_del_by_listel");
+  ERRBLKI;
 }
 
 /* call list_startwalk before a sequence of calls to list_walk */
@@ -170,8 +164,7 @@ int list_startwalk(const List *list, List_handle *handle)
   handle->current = list->first;
   handle->list = list;
   return 0;
-
-  ERRBLKI("list_startwalk");
+  ERRBLKI;
 }
 
 
@@ -195,8 +188,7 @@ void *list_walk(List_handle *handle, int return_listel)
       handle->current = handle->current->next;
       return ptr;
     }
-
-  ERRBLKP("list_walk");
+  ERRBLKP;
 }
 
 /*------------------------------------------------------------------------------*/

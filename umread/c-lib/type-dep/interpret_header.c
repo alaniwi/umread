@@ -1,6 +1,6 @@
 #include "umfileint.h"
 
-Data_type WITH_LEN(get_type)(const INTEGER *int_hdr)
+Data_type get_type(const INTEGER *int_hdr)
 {
   switch (int_hdr[INDEX_LBUSER1])
     {
@@ -22,7 +22,7 @@ Data_type WITH_LEN(get_type)(const INTEGER *int_hdr)
     }
 }
 
-size_t WITH_LEN(get_data_length) (const INTEGER *int_hdr) 
+size_t get_data_length (const INTEGER *int_hdr) 
 {
   size_t datalen;
 
@@ -46,11 +46,11 @@ size_t WITH_LEN(get_data_length) (const INTEGER *int_hdr)
 }
 
 
-int WITH_LEN(get_type_and_length)(const INTEGER *int_hdr,
-				   Data_type *type_rtn,
-				   size_t *num_words_rtn)
+int get_type_and_length_core(const INTEGER *int_hdr,
+				       Data_type *type_rtn,
+				       size_t *num_words_rtn)
 {
-  *type_rtn = WITH_LEN(get_type)(int_hdr);
-  *num_words_rtn = WITH_LEN(get_data_length)(int_hdr);
+  *type_rtn = get_type(int_hdr);
+  *num_words_rtn = get_data_length(int_hdr);
   return 0;
 }

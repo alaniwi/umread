@@ -2,6 +2,7 @@
 
 /*---------------------------*/
 
+#include "bits/constants.h"
 #include "bits/datatype.h"
 #include "bits/ordering.h"
 #include "bits/typedefs.h"
@@ -11,9 +12,13 @@
 
 /* ----------------------------------------------------------- */
 
-
-/* prototypes for datatype dependent functions are included via the following 
- * files automatically generated from type_dep_protos.h */
-
-#include "bits/protos_sgl.h"
-#include "bits/protos_dbl.h"
+#if defined(SINGLE) || defined(DOUBLE)
+#include "bits/type_dep_protos.h"
+#else
+#define WITH_LEN(x) x ## _sgl
+#include "bits/type_dep_entry_protos.h"
+#undef WITH_LEN
+#define WITH_LEN(x) x ## _dbl
+#include "bits/type_dep_entry_protos.h"
+#undef WITH_LEN
+#endif

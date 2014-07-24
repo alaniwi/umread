@@ -2,7 +2,35 @@
 
 #include "umfileint.h"
 
-int WITH_LEN(process_vars)(File *file, List *heaplist)
+
+File *file_parse_core(int fd,
+		      File_type file_type)
+{
+  File *file;
+  List *heaplist;
+
+  CKP(  file = new_file()  );
+  file->fd = fd;
+  file->file_type = file_type;
+
+  heaplist = file->internp->heaplist;
+
+  CKI(  read_all_headers(file, heaplist)  );
+  debug_dump_all_headers(file);
+  CKI(  process_vars(file, heaplist)  );
+  debug("got here okay %p...", file);
+
+  return file;
+
+ err:
+  debug("got here err %p...", file);
+  if (file)
+    free_file(file);
+  return NULL;
+}
+
+
+int process_vars(File *file, List *heaplist)
 {
   int nrec;
   Rec **recs;
@@ -10,18 +38,18 @@ int WITH_LEN(process_vars)(File *file, List *heaplist)
   nrec = file->internp->nrec;
   recs = file->internp->recs;
   
-  CKI(   WITH_LEN(initialise_records)(recs, nrec, heaplist)   );
+  CKI(   initialise_records(recs, nrec, heaplist)   );
+  debug("got here process_vars %p...", file);
 
   /* sort the records */
   //qsort(recs, nrec, sizeof(Rec*), compare_records);
   
-  // ....
-
-  ERRBLKI("process_vars");
+  return 0;
+  ERRBLKI;
 }
 
 
-int WITH_LEN(initialise_records)(Rec **recs, int nrec, List *heaplist) 
+int initialise_records(Rec **recs, int nrec, List *heaplist) 
 {
   int recno;
   Rec *rec;
@@ -36,22 +64,21 @@ int WITH_LEN(initialise_records)(Rec **recs, int nrec, List *heaplist)
 
       /* store level info */
       CKP(  rec->internp->lev = malloc_(sizeof(Level), heaplist)  );
-      CKI(  WITH_LEN(lev_set)(rec->internp->lev, rec)  );
+      CKI(  lev_set(rec->internp->lev, rec)  );
 
       /* store time info */
       CKP(  rec->internp->time = malloc_(sizeof(Time), heaplist)  );
-      CKI(  WITH_LEN(time_set)(rec->internp->time, rec)  );
-      rec->internp->mean_period = WITH_LEN(mean_period)(rec->internp->time);
+      CKI(  time_set(rec->internp->time, rec)  );
+      rec->internp->mean_period = mean_period(rec->internp->time);
   }
-  return 0;
-
-  ERRBLKI("initialise_records");
+  //  return 0;
+  ERRBLKI;
 }
 
 
-int WITH_LEN(lev_set)(Level *lev, Rec *rec) {
+int lev_set(Level *lev, Rec *rec) {
   
-  lev->type         = WITH_LEN(level_type)(rec);
+  lev->type         = level_type(rec);
 
   switch (lev->type) 
     {
@@ -98,10 +125,10 @@ int WITH_LEN(lev_set)(Level *lev, Rec *rec) {
 }
 
 
-Lev_type WITH_LEN(level_type)(const Rec *rec) 
+Lev_type level_type(const Rec *rec) 
 {
   if (LOOKUP(rec, INDEX_LBUSER5) != 0 
-      && LOOKUP(rec, INDEX_LBUSER5) != int_missing_data)
+      && LOOKUP(rec, INDEX_LBUSER5) != INT_MISSING_DATA)
     return pseudo_lev_type;
   
   switch (LOOKUP(rec, INDEX_LBVC))

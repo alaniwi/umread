@@ -27,8 +27,7 @@ Rec *new_rec(int word_size, List *heaplist)
   rec->data_offset = -1;
   rec->disk_length = -1;
   return rec;
-
-  ERRBLKP("new_rec");
+  ERRBLKP;
 }
 
 int free_rec(Rec *rec, List *heaplist)
@@ -38,8 +37,7 @@ int free_rec(Rec *rec, List *heaplist)
   CKI(   free_(rec->real_hdr, heaplist)   );
   CKI(   free_(rec, heaplist)   );
   return 0;
-
-  ERRBLKI("free_rec");
+  ERRBLKI;
 }
 
 Var *new_var(List *heaplist)
@@ -56,8 +54,7 @@ Var *new_var(List *heaplist)
   var->supervar_index = -1;
   var->recs = NULL;
   return var;
-
-  ERRBLKP("new_var");
+  ERRBLKP;
 }
 
 int free_var(Var *var, List *heaplist)
@@ -67,8 +64,7 @@ int free_var(Var *var, List *heaplist)
     CKI(   free_(var->recs, heaplist)   );
   CKI(   free_(var, heaplist)   );
   return 0;
-
-  ERRBLKI("free_var");
+  ERRBLKI;
 }
 
 
@@ -101,7 +97,7 @@ File *new_file()
  err2:
   free_(file, NULL);
  err1:
-  error("new_file");
+  GRIPE;
   return NULL;
 }
 
@@ -112,6 +108,5 @@ int free_file(File *file)
   CKI(   free_(file->internp, NULL)   );
   CKI(   free_(file, NULL)   );
   return 0;
-
-  ERRBLKI("free_file");
+  ERRBLKI;
 }

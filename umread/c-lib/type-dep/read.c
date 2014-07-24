@@ -5,7 +5,7 @@
 
 #define file_pos(f) (lseek(f, 0, SEEK_CUR))
 
-void WITH_LEN(swap_bytes)(void *ptr, size_t num_words)
+void swap_bytes(void *ptr, size_t num_words)
 {
   int i;
   char *p;
@@ -31,12 +31,12 @@ void WITH_LEN(swap_bytes)(void *ptr, size_t num_words)
     }
 }
 
-void WITH_LEN(swapbytes_if_swapped)(void *ptr, 
+void swapbytes_if_swapped(void *ptr, 
 				    size_t num_words,
 				    Byte_ordering byte_ordering)
 {
   if (byte_ordering == REVERSE_ORDERING)
-    WITH_LEN(swap_bytes)(ptr, num_words);
+    swap_bytes(ptr, num_words);
 }
 
 
@@ -44,7 +44,7 @@ void WITH_LEN(swapbytes_if_swapped)(void *ptr,
  * reads n words from file, storing them at ptr, with byte swapping as required
  * returns number of words read (i.e. n, unless there's a short read)
  */
-size_t WITH_LEN(read_words)(int fd, 
+size_t read_words(int fd, 
 			    void *ptr,
 			    size_t num_words,
 			    Byte_ordering byte_ordering)
@@ -53,49 +53,46 @@ size_t WITH_LEN(read_words)(int fd,
 
   CKP(ptr);
   nread = read(fd, ptr, num_words * WORD_SIZE) / WORD_SIZE;
-  WITH_LEN(swapbytes_if_swapped)(ptr, nread, byte_ordering);
+  swapbytes_if_swapped(ptr, nread, byte_ordering);
   return nread;
-
-  ERRBLKI("read_words");
+  ERRBLKI;
 }
 
 
-int WITH_LEN(read_header_at_offset)(int fd,
-				    size_t header_offset,
-				    Byte_ordering byte_ordering, 
-				    INTEGER *int_hdr_rtn,
-				    REAL *real_hdr_rtn)
+int read_hdr_at_offset(int fd,
+				 size_t header_offset,
+				 Byte_ordering byte_ordering, 
+				 INTEGER *int_hdr_rtn,
+				 REAL *real_hdr_rtn)
 {
-  /* as read_header below, but also specifying the file offset in bytes */
+  /* as read_hdr below, but also specifying the file offset in bytes */
 
   CKI(  lseek(fd, header_offset, SEEK_SET)  );
-  return WITH_LEN(read_header)(fd, byte_ordering, int_hdr_rtn, real_hdr_rtn);
-
-  ERRBLKI("read_header_at_offset");
+  return read_hdr(fd, byte_ordering, int_hdr_rtn, real_hdr_rtn);
+  ERRBLKI;
 }
 
 
-int WITH_LEN(read_header)(int fd,
-			  Byte_ordering byte_ordering, 
-			  INTEGER *int_hdr_rtn,
-			  REAL *real_hdr_rtn)
+int read_hdr(int fd,
+		       Byte_ordering byte_ordering, 
+		       INTEGER *int_hdr_rtn,
+		       REAL *real_hdr_rtn)
 {
   /* reads a PP header at specified word offset into storage 
      provided by the caller */
 
-  ERRIF(   WITH_LEN(read_words)(fd, int_hdr_rtn, 
-				N_INT_HDR, byte_ordering)   != N_INT_HDR);
-
-  ERRIF(   WITH_LEN(read_words)(fd, real_hdr_rtn, 
-				N_REAL_HDR, byte_ordering)   != N_REAL_HDR);
+  ERRIF(   read_words(fd, int_hdr_rtn, 
+		      N_INT_HDR, byte_ordering)   != N_INT_HDR);
+  
+  ERRIF(   read_words(fd, real_hdr_rtn, 
+		      N_REAL_HDR, byte_ordering)   != N_REAL_HDR);
 
   return 0;
-
-  ERRBLKI("read_header");    
+  ERRBLKI;    
 }
 
 
-Rec *WITH_LEN(get_record)(File *file, List *heaplist)
+Rec *get_record(File *file, List *heaplist)
 {
   /* reads PP headers and returns a Rec structure -- 
    *
@@ -111,62 +108,59 @@ Rec *WITH_LEN(get_record)(File *file, List *heaplist)
   CKP(   rec = new_rec(WORD_SIZE, heaplist)   );
 
   CKI(
-      WITH_LEN(read_header)(file->fd,
-			    file->file_type.byte_ordering,
-			    rec->int_hdr,
-			    rec->real_hdr)
+      read_hdr(file->fd,
+	       file->file_type.byte_ordering,
+	       rec->int_hdr,
+	       rec->real_hdr)
       );
   
   return rec; /* success */
-
-  ERRBLKP("get_record");    
+  ERRBLKP;    
 }
 
-int WITH_LEN(read_all_headers)(File *file, List *heaplist)
+int read_all_headers(File *file, List *heaplist)
 {
   switch (file->file_type.format)
     {
     case plain_pp:
-      return WITH_LEN(read_all_headers_pp)(file, heaplist);
+      return read_all_headers_pp(file, heaplist);
     case fields_file:
-      return WITH_LEN(read_all_headers_ff)(file, heaplist);
+      return read_all_headers_ff(file, heaplist);
     default:
       switch_bug("read_all_headers");
       ERR;
     }
-  return 0;
-  
-  ERRBLKI("read_all_headers");
+  return 0;  
+  ERRBLKI;
 }
 
 /* skip_fortran_record: skips a fortran record, and returns how big it was,
  *  or -1 for end of file, or -2 for any error which may imply corrupt file
  * (return value of 0 is a legitimate empty record).
  */
-size_t WITH_LEN(skip_fortran_record)(File *file)
+size_t skip_fortran_record(File *file)
 {
   INTEGER rec_bytes, rec_bytes_2;
 
-  if(   WITH_LEN(read_words)(file->fd, &rec_bytes, 1, 
-			     file->file_type.byte_ordering)   != 1) return -1;
+  if(   read_words(file->fd, &rec_bytes, 1, 
+		   file->file_type.byte_ordering)   != 1) return -1;
   CKI(   lseek(file->fd, rec_bytes, SEEK_CUR)   );
-  ERRIF(   WITH_LEN(read_words)(file->fd, &rec_bytes_2, 1, 
-				file->file_type.byte_ordering)   != 1);
+  ERRIF(   read_words(file->fd, &rec_bytes_2, 1, 
+		      file->file_type.byte_ordering)   != 1);
   ERRIF(rec_bytes != rec_bytes_2);
   return rec_bytes;
-  
-  ERRBLK("skip_fortran_record", -2);
+  ERRBLK(-2);
 }
 
-int WITH_LEN(skip_word)(File *file)
+int skip_word(File *file)
 {
   CKI(   lseek(file->fd, WORD_SIZE, SEEK_CUR)   );
   return 0;
 
-  ERRBLKI("skip_word");
+  ERRBLKI;
 }
 
-int WITH_LEN(read_all_headers_pp)(File *file, List *heaplist)
+int read_all_headers_pp(File *file, List *heaplist)
 {
   int fd;
   size_t nrec, rec_bytes, recno, header_offset;
@@ -176,7 +170,7 @@ int WITH_LEN(read_all_headers_pp)(File *file, List *heaplist)
 
   /* count the PP records in the file */
   lseek(fd, 0, SEEK_SET);
-  for (nrec = 0; (rec_bytes = WITH_LEN(skip_fortran_record)(file)) != -1; nrec++) 
+  for (nrec = 0; (rec_bytes = skip_fortran_record(file)) != -1; nrec++) 
     {
       ERRIF(rec_bytes == -2);
       if (rec_bytes != N_HDR * WORD_SIZE) {
@@ -184,7 +178,7 @@ int WITH_LEN(read_all_headers_pp)(File *file, List *heaplist)
 		   "unsupported header length in PP file: %d words", rec_bytes / WORD_SIZE);
 	ERR;
       }
-      ERRIF(   WITH_LEN(skip_fortran_record)(file)   < 0); /* skip the data record */
+      ERRIF(   skip_fortran_record(file)   < 0); /* skip the data record */
     }
   
   /* now rewind, and read in all the PP header data */
@@ -195,27 +189,26 @@ int WITH_LEN(read_all_headers_pp)(File *file, List *heaplist)
   lseek(fd, 0, SEEK_SET);
   for (recno = 0; recno < nrec; recno++)
     {
-      CKI(   WITH_LEN(skip_word)(file)   );
+      CKI(   skip_word(file)   );
       header_offset = file_pos(fd);
-      CKP(   rec = WITH_LEN(get_record)(file, heaplist)   );
-      CKI(   WITH_LEN(skip_word)(file)   );
+      CKP(   rec = get_record(file, heaplist)   );
+      CKI(   skip_word(file)   );
       recs[recno] = rec;
 
       /* skip data record but store length */
       rec->header_offset = header_offset;
       rec->data_offset = file_pos(fd) + WORD_SIZE;
-      rec->disk_length = WITH_LEN(skip_fortran_record)(file);
+      rec->disk_length = skip_fortran_record(file);
     }
   return 0;
-
-  ERRBLKI("read_all_headers_pp");
+  ERRBLKI;
 }
 
 
 #define READ_ITEM(x) \
-  ERRIF(   WITH_LEN(read_words)(fd, &x, 1, byte_ordering)   != 1);
+  ERRIF(   read_words(fd, &x, 1, byte_ordering)   != 1);
 
-int WITH_LEN(read_all_headers_ff)(File *file, List *heaplist)
+int read_all_headers_ff(File *file, List *heaplist)
 {
   int fd;
   int is_fields_file;
@@ -232,7 +225,7 @@ int WITH_LEN(read_all_headers_ff)(File *file, List *heaplist)
   CKI(   lseek(fd, 4 * WORD_SIZE, SEEK_SET)  );
   READ_ITEM(dataset_type);
 
-  ERRIF(   WITH_LEN(read_words)(fd, &dataset_type, 1, byte_ordering)   != 1);
+  ERRIF(   read_words(fd, &dataset_type, 1, byte_ordering)   != 1);
   
   CKI(   lseek(fd, 149 * WORD_SIZE, SEEK_SET)  );
   READ_ITEM(start_lookup);
@@ -261,7 +254,7 @@ int WITH_LEN(read_all_headers_ff)(File *file, List *heaplist)
   hdr_start = (start_lookup - 1) * WORD_SIZE;
   hdr_size = nlookup1 * WORD_SIZE;
   n_raw_rec = nlookup2;
-  CKI(  WITH_LEN(get_valid_records_ff)(fd, byte_ordering, hdr_start, hdr_size, n_raw_rec,
+  CKI(  get_valid_records_ff(fd, byte_ordering, hdr_start, hdr_size, n_raw_rec,
 				       valid, &n_valid_rec)  );  
 
   /* now read in all the PP header data */
@@ -279,11 +272,11 @@ int WITH_LEN(read_all_headers_ff)(File *file, List *heaplist)
 	{
 	  header_offset = hdr_start + i_raw_rec * hdr_size;
 	  CKI(   lseek(fd, header_offset, SEEK_SET)  );
-	  CKP(   rec = WITH_LEN(get_record)(file, heaplist)   );
+	  CKP(   rec = get_record(file, heaplist)   );
 	  recs[i_valid_rec] = rec;
 	  
 	  rec->header_offset = header_offset;
-	  rec->disk_length = WITH_LEN(get_ff_disk_length)(rec->int_hdr);
+	  rec->disk_length = get_ff_disk_length(rec->int_hdr);
 	  
 	  data_offset_specified = (size_t) LOOKUP(rec, INDEX_LBBEGIN) * WORD_SIZE;
 	  /* use LBBEGIN if available */
@@ -312,12 +305,11 @@ int WITH_LEN(read_all_headers_ff)(File *file, List *heaplist)
       
   CKI(  free_(valid, heaplist)  );
   return 0;
-  
-  ERRBLKI("read_all_headers_ff");
+  ERRBLKI;
 }
 
 
-int WITH_LEN(get_ff_disk_length)(INTEGER *ihdr)
+int get_ff_disk_length(INTEGER *ihdr)
 {
   
   /* work out disk length */
@@ -332,7 +324,7 @@ int WITH_LEN(get_ff_disk_length)(INTEGER *ihdr)
     return ihdr[INDEX_LBNREC];
   if (ihdr[INDEX_LBPACK] % 10 ==2)
     {
-      datalen = WITH_LEN(get_data_length)(ihdr);
+      datalen = get_data_length(ihdr);
       return datalen * 4 / WORD_SIZE;
     }
   return ihdr[INDEX_LBLREC];
@@ -343,7 +335,7 @@ int WITH_LEN(get_ff_disk_length)(INTEGER *ihdr)
  *  check which PP records are valid; populate an array provided by the caller with 1s and 0s
  *  and also provide the total count
  */
-int WITH_LEN(get_valid_records_ff)(int fd,
+int get_valid_records_ff(int fd,
 				   Byte_ordering byte_ordering,
 				   size_t hdr_start, size_t hdr_size, int n_raw_rec,
 				   int valid[], int *n_valid_rec_return)
@@ -368,7 +360,6 @@ int WITH_LEN(get_valid_records_ff)(int fd,
     }
   *n_valid_rec_return = n_valid_rec;
   return 0;
-
-  ERRBLKI("get_valid_records_ff");
+  ERRBLKI;
 }
 
