@@ -59,8 +59,19 @@ int WITH_LEN(get_valid_records_ff)(int fd,
 
 /* process_vars.c */
 int WITH_LEN(process_vars)(File *file, List *heaplist);
+int WITH_LEN(lev_set)(Level *lev, Rec *rec);
 
-/* debug_dump.c */
+/* date_and_time.c */
+REAL WITH_LEN(mean_period)(const Time *time);
+int WITH_LEN(is_time_mean)(INTEGER LBTIM);
+REAL WITH_LEN(time_diff)(INTEGER lbtim, const Date *date, const Date *orig_date);
+REAL WITH_LEN(sec_to_day)(int8 seconds);
+Calendar_type WITH_LEN(calendar_type)(INTEGER type);
+int8 WITH_LEN(gregorian_to_secs)(const Date *date);
+int WITH_LEN(time_set)(Time *time, Rec *rec);
+
+
+/* Debug_dump.c */
 void WITH_LEN(debug_dump_all_headers)(File *file);
 
 #ifdef MAIN

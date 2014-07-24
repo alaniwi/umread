@@ -16,7 +16,7 @@ TYPE_INDEP_OBJS= \
 	umfile.o error.o filetype.o umfile_test.o \
 	malloc.o linklist.o new_structs.o
 TYPE_DEP_OBJ_STEMS=umfile_test_typedep interpret_header read process_vars \
-	           debug_dump
+	           debug_dump date_and_time
 
 SGL_OBJS=$(foreach stem, $(TYPE_DEP_OBJ_STEMS), $(stem)_sgl.o)
 DBL_OBJS=$(foreach stem, $(TYPE_DEP_OBJ_STEMS), $(stem)_dbl.o)
