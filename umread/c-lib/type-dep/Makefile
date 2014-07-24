@@ -1,5 +1,5 @@
 STEMS = umfile_test_typedep interpret_header read process_vars \
-	debug_dump date_and_time compare
+	debug_dump date_and_time compare levels
 
 CFLAGS += -I..
 

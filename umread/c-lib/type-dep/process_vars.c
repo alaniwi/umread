@@ -68,7 +68,7 @@ int initialise_records(Rec **recs, int nrec, List *heaplist)
       CKI(  time_set(rec->internp->time, rec)  );
       rec->internp->mean_period = mean_period(rec->internp->time);
   }
-  //  return 0;
+  return 0;
   ERRBLKI;
 }
 
