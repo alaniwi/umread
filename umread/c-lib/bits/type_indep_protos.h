@@ -3,7 +3,7 @@
 /* error.c */
 void switch_bug(const char *routine);
 void gripe(const char *routine);
-void error_mesg(const char *routine, const char *fmt, ...);
+void error_mesg(const char *fmt, ...);
 void debug(const char *fmt, ...);
 void errorhandle_init();
 
@@ -36,6 +36,10 @@ void *list_find(List *list,
 		int (*compar)(const void *, const void *), 
 		int matchval,
 		int *index_return);
+int list_copy_to_ptr_array(const List *list, 
+			   int *n_return, 
+			   void *ptr_array_return,
+			   List *heaplist);
 
 /* filetype.c */
 int detect_file_type_(int fd, File_type *file_type);
@@ -44,6 +48,7 @@ int detect_file_type_(int fd, File_type *file_type);
 Rec *new_rec(int word_size, List *heaplist);
 int free_rec(Rec *rec, List *heaplist);
 Var *new_var(List *heaplist);
+int free_var(Var *var, List *heaplist);
 File *new_file();
 int free_file(File *file);
 

@@ -1,27 +1,21 @@
 #include "umfileint.h"
 
-/* functions to create pointers to new Rec, Var and File structures from heap memory
+/* functions to create pointers to new structures (such as Rec, Var and File)
+ * from heap memory
  *
- * Also for good measure functions to free these, although not crucial if they are not 
- * called, because of the garbage collection procedure employed elsewhere
+ * Also for good measure functions to free these, although most are not
+ * crucial if they are not called, because of the garbage collection procedure
+ * employed in free_file()
  */
 
 Rec *new_rec(int word_size, List *heaplist)
 {
   Rec *rec;
 
-  CKP(
-      rec = malloc_(sizeof(Rec), heaplist)
-      );
-  CKP(
-      rec->internp = malloc_(sizeof(struct _Rec), heaplist)
-      );
-  CKP(
-      rec->int_hdr = malloc_(N_INT_HDR * word_size, heaplist)
-      );
-  CKP(
-      rec->real_hdr = malloc_(N_INT_HDR * word_size, heaplist)
-      );
+  CKP(  rec = malloc_(sizeof(Rec), heaplist)  );
+  CKP(  rec->internp = malloc_(sizeof(struct _Rec), heaplist)  );
+  CKP(  rec->int_hdr = malloc_(N_INT_HDR * word_size, heaplist)  );
+  CKP(  rec->real_hdr = malloc_(N_REAL_HDR * word_size, heaplist)  );
 
   rec->header_offset = -1;
   rec->data_offset = -1;

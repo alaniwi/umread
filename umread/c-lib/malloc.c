@@ -42,8 +42,7 @@ void *malloc_(size_t size, List *heaplist){
 
   if (ptr == NULL)
     {
-      error_mesg("malloc_",
-		 "unable to allocate of %d bytes of memory in cdunifpp",
+      error_mesg("unable to allocate of %d bytes of memory",
 		 size);
     }
   else

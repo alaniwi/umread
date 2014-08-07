@@ -95,4 +95,3 @@ Lev_type level_type(const Rec *rec)
       return other_lev_type;
     }
 }
-

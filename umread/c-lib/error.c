@@ -7,11 +7,11 @@ static FILE *output = NULL;
 
 static int verbose;
 
-static const int do_debug = 0;
+static const int do_debug = 1;
 
 void switch_bug(const char *routine)
 {
-  error("no match in switch statement in routine; "
+  gripe("no match in switch statement in routine; "
 	"may indicate coding bug in umfile or unexpected header value");
 }
 
@@ -26,14 +26,13 @@ void gripe(const char *routine)
   verbose = 0;
 }
 
-void error_mesg(const char *routine, const char *fmt, ...)
+void error_mesg(const char *fmt, ...)
 {
   va_list args;
 
   if (verbose || do_debug)
     {
       va_start(args, fmt);
-      fprintf(output, "umfile: error condition detected in routine %s: ", routine);
       vfprintf(output, fmt, args);
       fprintf(output, "\n");
       va_end(args);

@@ -19,10 +19,15 @@ int read_record_data_core(int fd,
 /* interpret_header.c */
 Data_type get_type(const INTEGER *int_hdr);
 size_t get_data_length (const INTEGER *int_hdr);
-
 int get_type_and_length_core(const INTEGER *int_hdr,
 			     Data_type *type_rtn,
 			     size_t *num_words_rtn);
+int var_is_missing(const INTEGER *int_hdr);
+int get_var_stash_model(const INTEGER *int_hdr);
+int get_var_stash_section(const INTEGER *int_hdr);
+int get_var_stash_item(const INTEGER *int_hdr);
+int get_var_compression(const INTEGER *int_hdr);
+int get_var_gridcode(const INTEGER *int_hdr);
 
 /* read.c */
 void swap_bytes(void *ptr, size_t num_words);
@@ -59,7 +64,19 @@ int get_valid_records_ff(int fd,
 
 /* process_vars.c */
 int process_vars(File *file, List *heaplist);
+int test_skip_var(const Rec *rec);
 int initialise_records(Rec **recs, int nrec, List *heaplist);
+int get_vars(int nrec, Rec **recs, 
+	     List *vars, List *z_axes, List *t_axes, 
+	     List *heaplist);
+int set_disambig_index(Z_axis *z_axis, T_axis *t_axis, 
+		       Rec **recs, int nvrec, int svindex);
+int add_axes_to_var(Var *var, 
+		    Z_axis *z_axis, T_axis *t_axis, 
+		    List *z_axes, List *t_axes, 
+		    List *heaplist);
+int grid_supported(INTEGER *int_hdr);
+int var_has_regular_z_t(Z_axis *z_axis, T_axis *t_axis, Rec **recs, int nvrec);
 
 /* level.c */
 int lev_set(Level *lev, const Rec *rec);
@@ -74,6 +91,16 @@ Calendar_type calendar_type(INTEGER type);
 int8 gregorian_to_secs(const Date *date);
 int time_set(Time *time, const Rec *rec);
 
+/* axes.c */
+Z_axis *new_z_axis(List *heaplist);
+int free_z_axis(Z_axis *z_axis, List *heaplist);
+T_axis *new_t_axis(List *heaplist);
+int free_t_axis(T_axis *t_axis, List *heaplist);
+int t_axis_add(T_axis *t_axis, const Time *time, 
+	       int *index_return, List *heaplist);
+int z_axis_add(Z_axis *z_axis, const Level *lev, 
+	       int *index_return, List *heaplist);
+
 /* compare.c */
 int compare_records_between_vars(const Rec *a, const Rec *b);
 int compare_mean_periods(const Rec *a, const Rec *b);
@@ -82,10 +109,10 @@ int compare_records(const void *p1, const void *p2);
 int records_from_different_vars(const Rec *a, const Rec *b);
 int compare_lists(const List *l1, const List *l2, int (*compfunc)(const void*, const void*));
 int compare_levels(const void *p1, const void *p2);
-int compare_zaxes(const void *p1, const void *p2);
+int compare_z_axes(const void *p1, const void *p2);
 int compare_times(const void *p1, const void *p2);
 int compare_dates(const Date *a, const Date *b);
-int compare_taxes(const void *p1, const void *p2);
+int compare_t_axes(const void *p1, const void *p2);
 
 
 /* Debug_dump.c */

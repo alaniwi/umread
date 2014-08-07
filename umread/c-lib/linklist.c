@@ -227,3 +227,30 @@ void *list_find(List *list,
     *index_return = -1;
   return NULL;
 }
+
+
+int list_copy_to_ptr_array(const List *list, 
+			   int *n_return, 
+			   void *ptr_array_return,
+			   List *heaplist)
+{
+  int n;
+  List_handle handle;
+  List_element *listel;
+  void **ptr_array, **p;
+
+  n = list_size(list);
+  CKP(  ptr_array = malloc_(n * sizeof(void *), heaplist)  );
+  p = ptr_array;
+  
+  list_startwalk(list, &handle);
+  while ((listel = list_walk(&handle, 1)) != NULL)
+    {
+      *p = listel->ptr;
+      p++;
+    }  
+  *n_return = n;
+  * (void ***) ptr_array_return = ptr_array;
+  return 0;
+  ERRBLKI;
+}

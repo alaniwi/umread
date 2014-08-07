@@ -159,11 +159,12 @@ class Rec(object):
 
 if __name__ == '__main__':
 
-    #path = "test.pp"
+    path = "test.pp"
     #path = "/tmp/xjaroa.pj1991mar"
-    path = "/tmp/xjaroa.pj1991mar.le"
+    #path = "/tmp/xjaroa.pj1991mar.le"
     f = File(path)
     print f.format, f.byte_ordering, f.word_size
+    print len(f.vars)
     for var in f.vars:
         print "nz = %s, nt = %s" % (var.nz, var.nt)
         for rec in var.recs:

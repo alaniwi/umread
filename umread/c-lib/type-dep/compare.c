@@ -1,22 +1,23 @@
 /*
  * COMPARISON FUNCTIONS.
  *
- * NOTE: functions which take arguments of type void* (except for compare_ptrs)
- *   are designed to be used with generic routines:
- *   compare_records is envisaged for use with qsort;
- *   several other functions are envisaged for use with compare_lists (below).
+ * NOTE: functions which take arguments of type void* (except for
+ *   compare_ptrs) are designed to be used with generic routines:
+ *   compare_records is envisaged for use with qsort; several other functions
+ *   are envisaged for use with compare_lists (below).
  *
- *   In these cases if supplying pointers directly to the relevant structures, need to generate
- *   an extra level of pointer with "&" syntax.
+ *   In these cases if supplying pointers directly to the relevant structures,
+ *   need to generate an extra level of pointer with "&" syntax.
  *
- * But not all functions below are like that.  Don't assume functions can be used analogously
- * without first examining the argument lists.
+ * But not all functions below are like that.  Don't assume functions can be
+ * used analogously without first examining the argument lists.
  */
 
-/* The code profiler suggests that compare_ints and compare_reals are candidates for
- * inlining; however, unfortunately this sometimes gets compiled with c89 which doesn't support
- * inline functions.  Use a #define for compare_ints.  compare_reals, which is more
- * awkward to #define, is just going to have to stay as it is for now (it's called less often).
+/* The code profiler suggests that compare_ints and compare_reals are
+ * candidates for inlining; however, unfortunately this sometimes gets
+ * compiled with c89 which doesn't support inline functions.  Use a #define
+ * for compare_ints.  compare_reals, which is more awkward to #define, is just
+ * going to have to stay as it is for now (it's called less often).
  */
 
 #include <math.h>
@@ -68,7 +69,6 @@ static int compare_reals(REAL a, REAL b)
 int compare_records_between_vars(const Rec *a, const Rec *b) 
 {
   int cmp;
-
   COMPARE_INTS(INDEX_LBUSER4);
   COMPARE_INTS(INDEX_LBUSER7);
   COMPARE_INTS(INDEX_LBCODE);
@@ -90,9 +90,10 @@ int compare_records_between_vars(const Rec *a, const Rec *b)
   cmp = compare_mean_periods(a, b);
   if (cmp != 0) return cmp;
 
-  /* Disambig index is used to force distinction between variables for records whose headers
-   * are the same.  It is initialised to the same value for all records (in fact -1), but may
-   * later be set to different values according to some heuristic.
+  /* Disambig index is used to force distinction between variables for records
+   * whose headers are the same.  It is initialised to the same value for all
+   * records (in fact -1), but may later be set to different values according
+   * to some heuristic.
    */
 
   cmp = compare_ints(a->internp->disambig_index, b->internp->disambig_index);
@@ -224,13 +225,20 @@ int compare_records(const void *p1, const void *p2)
   int cmp;
 
   cmp = compare_records_between_vars(a, b);
-  if (cmp != 0)
+  if (cmp != 0) {
+    //    debug("compare_records - variables differ %d %d", LOOKUP(a,INDEX_LBUSER4),
+    //	  LOOKUP(b,INDEX_LBUSER4));
+
     return cmp * 2;
-
+  }
   cmp = compare_records_within_var(a, b);
-  if (cmp != 0)
-    return cmp;
+  if (cmp != 0){
+    //    debug("compare_records - variables same %d %d", LOOKUP(a,INDEX_LBUSER4),
+    //LOOKUP(b,INDEX_LBUSER4));
 
+    return cmp;
+  }
+//debug("compare_records - records same");
   return 0;
 }
 
@@ -309,7 +317,7 @@ int compare_levels(const void *p1, const void *p2)
   return 0;
 }
 
-int compare_zaxes(const void *p1, const void *p2) 
+int compare_z_axes(const void *p1, const void *p2) 
 {
   const Z_axis *a = * (Z_axis **) p1;
   const Z_axis *b = * (Z_axis **) p2;
@@ -347,7 +355,7 @@ int compare_dates(const Date *a, const Date *b)
   return 0;
 }
 
-int compare_taxes(const void *p1, const void *p2) 
+int compare_t_axes(const void *p1, const void *p2) 
 {
   const T_axis *a = * (T_axis **) p1;
   const T_axis *b = * (T_axis **) p2;

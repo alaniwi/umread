@@ -174,8 +174,8 @@ int read_all_headers_pp(File *file, List *heaplist)
     {
       ERRIF(rec_bytes == -2);
       if (rec_bytes != N_HDR * WORD_SIZE) {
-	error_mesg("read_all_headers_pp", 
-		   "unsupported header length in PP file: %d words", rec_bytes / WORD_SIZE);
+	error_mesg("unsupported header length in PP file: %d words", 
+		   rec_bytes / WORD_SIZE);
 	ERR;
       }
       ERRIF(   skip_fortran_record(file)   < 0); /* skip the data record */
@@ -244,8 +244,7 @@ int read_all_headers_ff(File *file, List *heaplist)
 
   if (nlookup1 < N_HDR)
     {
-      error_mesg("read_all_headers_pp", 
-		 "unsupported header length: %d words", nlookup1);
+      error_mesg("unsupported header length: %d words", nlookup1);
       ERR;
     }
 
@@ -292,13 +291,13 @@ int read_all_headers_ff(File *file, List *heaplist)
 	      && LOOKUP(rec, INDEX_LBBEGIN) != 0
 	      && data_offset_calculated != data_offset_specified)
 	    {
-	      error_mesg("read_all_headers_ff", "start of data record mismatch: %d %d",
+	      error_mesg("start of data record mismatch: %d %d",
 			 data_offset_calculated, data_offset_specified);
 	      ERR;
 	    }
 	  
 	  data_offset_calculated += rec->disk_length * WORD_SIZE;
-	  debug("did record %d %d", i_raw_rec, i_valid_rec);
+	  //debug("did record %d %d", i_raw_rec, i_valid_rec);
 	  i_valid_rec++;
 	}
     }

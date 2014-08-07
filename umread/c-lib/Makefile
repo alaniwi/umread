@@ -3,7 +3,7 @@ HEADERS=umfile.h umfileint.h bits/*.h
 LIBRARY=umfile_test.so
 
 CC=gcc
-CFLAGS=-Wall -fPIC
+CFLAGS=-Wall -fPIC -g
 CPP=gcc -E -P
 LD=ld
 LDFLAGS=-shared

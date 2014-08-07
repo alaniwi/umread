@@ -81,15 +81,6 @@ typedef enum
 
 typedef struct
 {
-  int dimid;
-  Lev_type lev_type;
-  INTEGER lbvc;
-  List *values;
-}
-  Z_axis;
-
-typedef struct
-{
   INTEGER year;
   INTEGER month;
   INTEGER day;
@@ -110,8 +101,8 @@ typedef struct
 
 typedef struct
 {
-  int dimid;
-  INTEGER type;
+  //int dimid;
+  int type;  /* set to LBTIM */
   List *values;
   Date time_orig;
 }
@@ -169,8 +160,18 @@ typedef struct
 }
   Level;
 
+typedef struct
+{
+  //int dimid;
+  Lev_type lev_type;
+  List *values;
+}
+  Z_axis;
+
 #else
 
+typedef void Z_axis;
+typedef void T_axis;
 typedef void Time;
 typedef void Level;
 
@@ -187,6 +188,11 @@ struct _File
 
 struct _Var 
 {
+  Z_axis *z_axis;
+  T_axis *t_axis;
+  Rec *first_rec;
+  int first_rec_no;
+  int last_rec_no;
 };
 
 struct _Rec 
