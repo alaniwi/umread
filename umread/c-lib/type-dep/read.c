@@ -259,22 +259,8 @@ int read_all_headers_ff(File *file, List *heaplist)
 	  rec->data_offset =
 	    (data_offset_specified != 0) ? data_offset_specified : data_offset_calculated;
 	  
-	  /* If LBNREC and LBBEGIN are both non-zero and it's not a FIELDSfile,
-	   *   the file has well-formed records.  In that case, 
-	   *   LBBEGIN should be correct, so do an assertion
-	   */
-	  if (!is_fields_file 
-	      && LOOKUP(rec, INDEX_LBNREC) != 0
-	      && LOOKUP(rec, INDEX_LBBEGIN) != 0
-	      && data_offset_calculated != data_offset_specified)
-	    {
-	      error_mesg("start of data record mismatch: %d %d",
-			 data_offset_calculated, data_offset_specified);
-	      ERR;
-	    }
-	  
 	  data_offset_calculated += rec->disk_length * WORD_SIZE;
-	  //debug("did record %d %d", i_raw_rec, i_valid_rec);
+
 	  i_valid_rec++;
 	}
     }
@@ -297,7 +283,7 @@ size_t get_ff_disk_length(INTEGER *ihdr)
 
   if (ihdr[INDEX_LBPACK] != 0 && ihdr[INDEX_LBNREC] != 0) 
     return ihdr[INDEX_LBNREC];
-  if (ihdr[INDEX_LBPACK] % 10 ==2)
+  if (ihdr[INDEX_LBPACK] % 10 == 2)
     {
       datalen = get_data_length(ihdr);
       return datalen * 4 / WORD_SIZE;
