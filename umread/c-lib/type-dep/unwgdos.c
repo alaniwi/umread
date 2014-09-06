@@ -53,19 +53,19 @@ int unwgdos(void *datain, int nbytes, REAL *dataout, int nout, REAL mdi)
   if (swap == -1)
     {
       /* see if data is byte swapped with 4 byte words */
-      ix = get_int16(p + 14, little_endian);
-      iy = get_int16(p + 12, little_endian);
+      ix = get_int16(p + 10, little_endian);
+      iy = get_int16(p + 8, little_endian);
       if (ix*iy == nout) swap = 4;
     }
   
   if (swap == -1)
     {
       /* see if data is byte swapped with 8 byte words */       
-      ix = get_int16(p + 6, little_endian);
-      iy = get_int16(p + 4, little_endian);;
+      ix = get_int16(p + 14, little_endian);
+      iy = get_int16(p + 12, little_endian);
       if (ix*iy == nout) swap = 8;
     }
-  
+
   if (swap == -1)
     {
       error_mesg("WGDOS data header record mismatch ");
