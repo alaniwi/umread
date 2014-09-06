@@ -64,7 +64,7 @@ class CInterface(object):
     """
     Interface to the C shared library functions
     """
-    def __init__(self, lib_name = "umfile_test.so"):
+    def __init__(self, lib_name = "umfile.so"):
         lib_dir = os.path.join(os.path.dirname(__file__) or ".",
                                "c-lib")
         lib_path = os.path.join(lib_dir, lib_name)

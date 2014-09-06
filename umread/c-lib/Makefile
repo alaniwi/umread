@@ -1,13 +1,13 @@
 HEADERS=umfile.h umfileint.h bits/*.h
 
-LIBRARY=umfile_test.so
+LIBRARY=umfile.so
 
 CC=gcc
 CFLAGS=-Wall -fPIC -g
 CPP=gcc -E -P
 LD=ld
 LDFLAGS=-shared
-OBJS = umfile.o error.o filetype.o umfile_test.o \
+OBJS = umfile.o error.o filetype.o \
 	malloc.o linklist.o new_structs.o swap.o
 
 TYPE_DEP_LIBRARY = umfile_typedep.a
