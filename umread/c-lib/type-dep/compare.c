@@ -317,18 +317,6 @@ int compare_levels(const void *p1, const void *p2)
   return 0;
 }
 
-int compare_z_axes(const void *p1, const void *p2) 
-{
-  const Z_axis *a = * (Z_axis **) p1;
-  const Z_axis *b = * (Z_axis **) p2;
-  int cmp;
-  /* differ if level type differs */
-  /*   if ((cmp=compare_ints(a->type,b->type))!=0) return cmp;  */
-  /* differ if level lists differ */
-  if ((cmp = compare_lists(a->values, b->values, compare_levels)) != 0) return cmp;
-  return 0;
-}
-
 int compare_times(const void *p1, const void *p2)
 {
   const Time *a = * (Time **) p1;
@@ -355,18 +343,3 @@ int compare_dates(const Date *a, const Date *b)
   return 0;
 }
 
-int compare_t_axes(const void *p1, const void *p2) 
-{
-  const T_axis *a = * (T_axis **) p1;
-  const T_axis *b = * (T_axis **) p2;
-  int cmp;
-  /* differ if time type differs */
-  /*  if ((cmp=compare_ints(a->type%100,b->type%100))!=0) return cmp;  */
-
-  /* differ if time origin differs */
-  if ((cmp = compare_dates(&a->time_orig, &b->time_orig)) != 0) return cmp;
-
-  /* differ if time lists differ */
-  if ((cmp = compare_lists(a->values, b->values, compare_times)) != 0) return cmp;
-  return 0;
-}

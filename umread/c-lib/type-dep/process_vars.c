@@ -31,7 +31,7 @@ int process_vars(File *file, List *heaplist)
 {
   int nrec;
   Rec **recs;
-  List *vars, *z_axes, *t_axes;
+  List *vars;
 
   nrec = file->internp->nrec;
   recs = file->internp->recs;
@@ -44,9 +44,7 @@ int process_vars(File *file, List *heaplist)
 
   /* now sort out the list of variables and dimensions */
   CKP(   vars = list_new(heaplist)   );
-  CKP(   z_axes = list_new(heaplist)   );
-  CKP(   t_axes = list_new(heaplist)   );
-  CKI(   get_vars(nrec, recs, vars, z_axes, t_axes, heaplist)   );
+  CKI(   get_vars(nrec, recs, vars, heaplist)   );
   /* move the variables from the linked list to the array */
   CKI(   list_copy_to_ptr_array(vars, &file->nvars, &file->vars, heaplist)   );
   CKI(   list_free(vars, 0, heaplist)   );
@@ -60,7 +58,7 @@ int process_vars(File *file, List *heaplist)
  */
 
 int get_vars(int nrec, Rec **recs, 
-	     List *vars, List *z_axes, List *t_axes, 
+	     List *vars, 
 	     List *heaplist)
 {
   int recno;
@@ -115,8 +113,6 @@ int get_vars(int nrec, Rec **recs,
 	  CKP(  z_axis = new_z_axis(heaplist)  );
 	  CKP(  t_axis = new_t_axis(heaplist)  );
 
-	  var->internp->z_axis = z_axis;
-	  var->internp->t_axis = t_axis;
 	  var->internp->first_rec_no = recno;
 	  var->internp->last_rec_no = -1;
 	  var->internp->first_rec = rec;
@@ -137,8 +133,8 @@ int get_vars(int nrec, Rec **recs,
 	vrecs = recs + var->internp->first_rec_no;
 	
       /* now if the axes are not regular, free the axes, split the variable
-	 into a number of variables and try again...
-      */
+       * into a number of variables and try again...
+       */
       if (set_disambig_index(z_axis, t_axis, vrecs, nvrec, svindex))
 	{
 	  /* increment the supervar index, used later to show the connection
@@ -172,14 +168,12 @@ int get_vars(int nrec, Rec **recs,
       if (svindex >= 0)
 	var->supervar_index = svindex;
 
-      /* add these axes to the field variable */
-      // FIXME - do we need this??
-      CKI(  add_axes_to_var(var, z_axis, t_axis, 
-			    z_axes, t_axes, 
-			    heaplist)  );
-
       /* add the variable */
       CKI(   list_add(vars, var, heaplist)   );
+
+      /* don't need the axes any more */
+      CKI(  free_z_axis(z_axis, heaplist)  );
+      CKI(  free_t_axis(t_axis, heaplist)  );
       }
   }
   return 0;
@@ -242,38 +236,6 @@ int initialise_records(Rec **recs, int nrec, List *heaplist)
       CKI(  time_set(rec->internp->time, rec)  );
       rec->internp->mean_period = mean_period(rec->internp->time);
   }
-  return 0;
-  ERRBLKI;
-}
-
-
-/* ========================================================= */
-
-/* Add supplied axis information to the variable 
- * For each axis, see if it matches an axis which already exists from a
- * previous variable.  If so, then free the structure [Note side-effect!] and
- * point to the existing occurrence instead.  If not, then add to the list.
- *
- */
-
-int add_axes_to_var(Var *var, 
-		    Z_axis *z_axis, T_axis *t_axis, 
-		    List *z_axes, List *t_axes, 
-		    List *heaplist)
-{
-  /* z */
-  CKI(  list_add_or_find(z_axes, &z_axis, compare_z_axes, 0, 
-			 (free_func) free_z_axis, 
-			 NULL, heaplist)  );
-  /* t */
-  CKI(  list_add_or_find(t_axes, &t_axis, compare_t_axes, 0, 
-			 (free_func) free_t_axis, 
-			 NULL, heaplist)  );
-
-  /* associate var with these axes */
-  var->internp->z_axis = z_axis;
-  var->internp->t_axis = t_axis;
-  
   return 0;
   ERRBLKI;
 }

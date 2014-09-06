@@ -50,7 +50,7 @@ int process_vars(File *file, List *heaplist);
 int test_skip_var(const Rec *rec);
 int initialise_records(Rec **recs, int nrec, List *heaplist);
 int get_vars(int nrec, Rec **recs, 
-	     List *vars, List *z_axes, List *t_axes, 
+	     List *vars, 
 	     List *heaplist);
 int set_disambig_index(Z_axis *z_axis, T_axis *t_axis, 
 		       Rec **recs, int nvrec, int svindex);
@@ -92,10 +92,8 @@ int compare_records(const void *p1, const void *p2);
 int records_from_different_vars(const Rec *a, const Rec *b);
 int compare_lists(const List *l1, const List *l2, int (*compfunc)(const void*, const void*));
 int compare_levels(const void *p1, const void *p2);
-int compare_z_axes(const void *p1, const void *p2);
 int compare_times(const void *p1, const void *p2);
 int compare_dates(const Date *a, const Date *b);
-int compare_t_axes(const void *p1, const void *p2);
 
 /* unwgdos.c */
 int unwgdos(void *datain, int nbytes, REAL *dataout, int nout, REAL mdi);

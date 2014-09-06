@@ -99,10 +99,7 @@ typedef struct
 
 typedef struct
 {
-  //int dimid;
-  int type;  /* set to LBTIM */
   List *values;
-  Date time_orig;
 }
   T_axis;
 
@@ -160,8 +157,6 @@ typedef struct
 
 typedef struct
 {
-  //int dimid;
-  Lev_type lev_type;
   List *values;
 }
   Z_axis;

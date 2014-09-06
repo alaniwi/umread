@@ -2,14 +2,22 @@
 
 #include "umfileint.h"
 
+/*
+ * Functions relating to time and z axes.
+ *
+ * These functions have very similar content for Z and T axes, because in fact 
+ * the Z_axis and T_axis struct each only contains a list of values.  In cdunifpp,
+ * there are other elements (e.g. a time axis origin) that are used when comparing 
+ * axes (maybe unnecessarily).  In umread, we do not even bother to compare axes 
+ * because axes are not returned to the caller: they are just used to evaluate the 
+ * shape of the variable (nz, nt) and ensure that it is regular.
+ */
+
 T_axis *new_t_axis(List *heaplist)
 {
   T_axis *t_axis;
   CKP(  t_axis = malloc_(sizeof(T_axis), heaplist)  );
   t_axis->values = list_new(heaplist);
-  t_axis->type = -1;   //FIXME: used?
-  // t_axis->dimid = -1;   //FIXME: used?
-  memset(&t_axis->time_orig, 0, sizeof(Date));    //FIXME: used?
   return t_axis;
   ERRBLKP;
 }
@@ -28,8 +36,6 @@ Z_axis *new_z_axis(List *heaplist)
   Z_axis *z_axis;
   CKP(  z_axis = malloc_(sizeof(Z_axis), heaplist)  );
   z_axis->values = list_new(heaplist);
-  // z_axis->dimid = -1; //FIXME: used?
-  z_axis->lev_type = -1; //FIXME: used?
   return z_axis;
   ERRBLKP;
 }
