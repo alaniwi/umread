@@ -38,7 +38,6 @@ void *malloc_(size_t size, List *heaplist){
 
   /* The only call to malloc in umfile c-lib (except in unwgdos.c and packed_data in read.c) */
   ptr = malloc(size + extrasize);
-  //debug("malloc: %d(+%d) -> %p", size, extrasize, ptr);
 
   if (ptr == NULL)
     {
@@ -99,9 +98,10 @@ int free_(void *ptr, List *heaplist)
   /* this is our list element */
   el = * (List_element**) ptr;
   
-  /* The only call to free in umfile c-lib (except unwgdos) */
+  /* The only call to free in umfile c-lib 
+   *  (except in unwgdos.c and packed_data in read.c)
+   */
   free(ptr);
-  //debug("free: %p", ptr);
 
   /*   printf ("free: %p\n",ptr);   */
   if (heaplist != NULL)

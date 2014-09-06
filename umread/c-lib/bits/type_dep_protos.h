@@ -1,5 +1,3 @@
-//-----------------------
-
 /* interpret_header.c */
 Data_type get_type(const INTEGER *int_hdr);
 size_t get_data_length (const INTEGER *int_hdr);
