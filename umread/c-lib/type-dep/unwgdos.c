@@ -1,6 +1,8 @@
 
 /*
- *  Modified version of unwgdos to remove the dependence on Cray utilities.
+ *  Modified version of unwgdos to remove the dependence on all the Cray
+ *  utilities, most of which were irrelevant (although some needed functions
+ *  have been added below and it also calls byte-swapping code in swap.c).  
  *  It is for use on machines with native IEEE integer types.
  *
  *  Note API change compared to version taken from xconv: datain is void* and 
@@ -10,6 +12,9 @@
 /* unwgdos.c is unpack.c file from xconv but with GRIB stuff stripped out */
 
 #include <math.h>
+#include <limits.h>
+#include <float.h>
+#include <errno.h>
 
 #include "umfileint.h"
 #include "stdlib.h"
@@ -21,6 +26,10 @@ static int xpnd(int, int32_t *, REAL *, REAL, int, REAL, int, REAL);
 static int extrin(int32_t *, int, int, int, int *, int);
 static int bit_test(void *, int);
 static void move_bits(void *, int, int, void *);
+static float32_t get_float32(void *);
+static int16_t get_int16(void *, Byte_ordering);
+static int32_t get_int32(void *, Byte_ordering);
+
 
 int unwgdos(void *datain, int nbytes, REAL *dataout, int nout, REAL mdi)
 {
@@ -29,35 +38,31 @@ int unwgdos(void *datain, int nbytes, REAL *dataout, int nout, REAL mdi)
   int icx, j;
   int ibit, nop;
   int swap;
-  int16_t *datain16;
-  int32_t *datain32;
-  float32_t *datainr32;
-  
-  datain16 = (int16_t *) datain;
-  datain32 = (int32_t *) datain;
-  datainr32 = (float32_t *) datain;
-  
+  char *p, *p1;
+
   /* Determine if data needs byte swapping */
+
+  p = datain;
   
   swap = -1;
   
-  ix = datain16[4];
-  iy = datain16[5];
+  ix = get_int16(p + 8, big_endian);
+  iy = get_int16(p + 10, big_endian);
   if (ix*iy == nout) swap = 0;
   
   if (swap == -1)
     {
       /* see if data is byte swapped with 4 byte words */
-      ix = int16_swap_bytes(datain16[7]);
-      iy = int16_swap_bytes(datain16[6]);
+      ix = get_int16(p + 14, little_endian);
+      iy = get_int16(p + 12, little_endian);
       if (ix*iy == nout) swap = 4;
     }
   
   if (swap == -1)
     {
       /* see if data is byte swapped with 8 byte words */       
-      ix = int16_swap_bytes(datain16[3]);
-      iy = int16_swap_bytes(datain16[2]);
+      ix = get_int16(p + 6, little_endian);
+      iy = get_int16(p + 4, little_endian);;
       if (ix*iy == nout) swap = 8;
     }
   
@@ -80,10 +85,9 @@ int unwgdos(void *datain, int nbytes, REAL *dataout, int nout, REAL mdi)
      32 bit integer type */
   
   /* Extract scale factor and number of columns and rows from header */
-  /* len = datain32[0]; */ /* not used?? */
-  isc = datain32[1];
-  ix = datain16[4];
-  iy = datain16[5];
+  isc = get_int32(p + 4, big_endian);
+  ix = get_int16(p + 8, big_endian);
+  iy = get_int16(p + 10, big_endian);
   
   /* Expand compressed data */
   
@@ -93,14 +97,15 @@ int unwgdos(void *datain, int nbytes, REAL *dataout, int nout, REAL mdi)
   for (j=0; j<iy; j++)
     {
       /* Extract base, number of bits per value, number of 32 bit words used */
-      base = datainr32[icx];
-      ibit = datain16[(icx + 1) * 2];
-      nop = datain16[(icx + 1) * 2 + 2];
+      p1 = p + icx * 4;
+      base = get_float32(p1);
+      ibit = get_int16(p1 + 4, big_endian);
+      nop = get_int16(p1 + 6, big_endian);
       
 #if NATIVE_ORDERING == little_endian
-      swap_bytes_sgl(datain32+icx+2, nop);
+      swap_bytes_sgl(p1 + 8, nop);
 #endif
-      xpnd(ix, datain32+icx+2, dataout, prec, ibit, base, nop, mdi);
+      xpnd(ix, (int32_t *) (p1 + 8), dataout, prec, ibit, base, nop, mdi);
       
       icx += nop + 2;
       dataout += ix;
@@ -412,3 +417,81 @@ static void move_bits(void *word1, int start1, int nbits, void *word2)
       ui2[0] = temp1 | temp2;
     }
 }
+
+
+#define I32_INFP   0x7f800000
+#define I32_INFN   0xff800000
+#define I32_ZEROP  0x00000000
+#define I32_ZERON  0x80000000
+
+/* based on ibmr4_to_r4 */
+static float32_t get_float32(void *in)
+{
+  unsigned char *pin;
+  unsigned long man;
+  int exp, sign;
+  double d;
+  uint32_t i32;
+
+  pin = (unsigned char *) in;
+
+  sign = pin[0] & 0x80;
+  exp = pin[0] & 0x7f;
+  man = ((unsigned long) pin[1] << 16) | 
+    ((unsigned long) pin[2] << 8) | (unsigned long) pin[3];
+
+  d = ldexp((double) man ,4*(exp-64-6));
+
+  if (d > (double) FLT_MAX || errno == ERANGE)
+    {
+      i32 = (sign ? I32_INFN : I32_INFP);
+      return *(float32_t *) &i32;
+    }
+  else if (d < (double) FLT_MIN) 
+    {
+      i32 = (sign ? I32_ZERON : I32_ZEROP);
+      return *(float32_t *) &i32;
+    }
+  else
+    return (sign ? -d : d);
+}
+
+
+/* functions to get data values that are stored starting at a specified 
+ * pointer with the specified byte ordering; if they are in native byte
+ * ordering then just copy them, otherwise byte-swap them
+ */
+static int16_t get_int16(void *start, Byte_ordering byte_ordering)
+{
+  if (byte_ordering == NATIVE_ORDERING)
+    {
+      return *(int16_t *) start;
+    }
+  else
+    {
+      char *in, out[2];
+      in = (char *) start;
+      out[0] = in[1];
+      out[1] = in[0];
+      return *(int16_t *) out;
+    }
+}
+
+static int32_t get_int32(void *start, Byte_ordering byte_ordering)
+{
+  if (byte_ordering == NATIVE_ORDERING)
+    {
+      return *(int32_t *) start;
+    }
+  else
+    {
+      char *in, out[4];
+      in = (char *) start;
+      out[0] = in[3];
+      out[1] = in[2];
+      out[2] = in[1];
+      out[3] = in[0];
+      return *(int32_t *) out;
+    }
+}
+

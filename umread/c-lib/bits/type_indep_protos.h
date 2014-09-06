@@ -19,7 +19,6 @@ int free_all(List *heaplist);
  */
 void swap_bytes_sgl(void *ptr, size_t num_words);
 void swap_bytes_dbl(void *ptr, size_t num_words);
-int16_t int16_swap_bytes(int16_t x);
 
 /* linklist.c */
 typedef int(*free_func) (void *, List *);
