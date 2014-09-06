@@ -1,19 +1,3 @@
-// FIXME - remove test protos------------------
-Rec *rec_alloc();
-void rec_free(Rec *rec);
-Rec *rec_create_dummy(int k);
-int get_type_and_length_dummy(const void *int_hdr, Data_type *type_rtn, size_t *num_words_rtn);
-void read_record_data_dummy(size_t nwords, 
-			    void *data_return);
-int read_record_data_core(int fd, 
-			  size_t data_offset, 
-			  size_t disk_length, 
-			  Byte_ordering byte_ordering, 
-			  int word_size, 
-			  const void *int_hdr,
-			  const void *real_hdr,
-			  size_t nwords, 
-			  void *data_return);
 //-----------------------
 
 /* interpret_header.c */
@@ -28,12 +12,10 @@ int get_var_stash_section(const INTEGER *int_hdr);
 int get_var_stash_item(const INTEGER *int_hdr);
 int get_var_compression(const INTEGER *int_hdr);
 int get_var_gridcode(const INTEGER *int_hdr);
+int get_var_packing(const INTEGER *int_hdr);
+REAL get_var_real_fill_value(const REAL *int_hdr);
 
 /* read.c */
-void swap_bytes(void *ptr, size_t num_words);
-void swapbytes_if_swapped(void *ptr, 
-			  size_t num_words,
-			  Byte_ordering byte_ordering);
 size_t read_words(int fd, 
 		  void *ptr,
 		  size_t num_words,
@@ -56,11 +38,12 @@ size_t skip_fortran_record(File *file);
 int skip_word(File *file);
 int read_all_headers_pp(File *file, List *heaplist);
 int read_all_headers_ff(File *file, List *heaplist);
-int get_ff_disk_length(INTEGER *ihdr);
+size_t get_ff_disk_length(INTEGER *ihdr);
 int get_valid_records_ff(int fd,
 			 Byte_ordering byte_ordering,
 			 size_t hdr_start, size_t hdr_size, int nrec,
 			 int valid[], int *n_valid_rec_return);
+
 
 /* process_vars.c */
 int process_vars(File *file, List *heaplist);
@@ -86,9 +69,9 @@ Lev_type level_type(const Rec *rec);
 REAL mean_period(const Time *time);
 int is_time_mean(INTEGER LBTIM);
 REAL time_diff(INTEGER lbtim, const Date *date, const Date *orig_date);
-REAL sec_to_day(int8 seconds);
+REAL sec_to_day(int64_t seconds);
 Calendar_type calendar_type(INTEGER type);
-int8 gregorian_to_secs(const Date *date);
+int64_t gregorian_to_secs(const Date *date);
 int time_set(Time *time, const Rec *rec);
 
 /* axes.c */
@@ -113,6 +96,9 @@ int compare_z_axes(const void *p1, const void *p2);
 int compare_times(const void *p1, const void *p2);
 int compare_dates(const Date *a, const Date *b);
 int compare_t_axes(const void *p1, const void *p2);
+
+/* unwgdos.c */
+int unwgdos(void *datain, int nbytes, REAL *dataout, int nout, REAL mdi);
 
 
 /* Debug_dump.c */

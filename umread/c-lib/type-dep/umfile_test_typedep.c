@@ -67,33 +67,33 @@ void read_record_data_dummy(size_t nwords,
 } 
 
 
-int read_record_data_core(int fd, 
-				    size_t data_offset, 
-				    size_t disk_length,
-				    Byte_ordering byte_ordering, 
-				    int word_size, 
-				    const void *int_hdr,
-				    const void *real_hdr,
-				    size_t nwords, 
-				    void *data_return)
-{
-  int i;
-  assert(byte_ordering == little_endian);
-  assert(word_size == 4);
-
-  printf("start of int header seen in read_record_data_dummy():");
-  for (i = 0; i < 5; i++)
-    printf("  %d", ((INTEGER *) int_hdr)[i]);
-  printf("\n");
-  printf("start of real header seen in read_record_data_dummy():");
-  for (i = 0; i < 5; i++)
-    printf("  %f", ((REAL *) real_hdr)[i]);
-  printf("\n");
-
-  read_record_data_dummy(nwords, data_return);
-  return 0;
-}
-
+// int read_record_data_core(int fd, 
+// 				    size_t data_offset, 
+// 				    size_t disk_length,
+// 				    Byte_ordering byte_ordering, 
+// 				    int word_size, 
+// 				    const void *int_hdr,
+// 				    const void *real_hdr,
+// 				    size_t nwords, 
+// 				    void *data_return)
+// {
+//   int i;
+//   assert(byte_ordering == little_endian);
+//   assert(word_size == 4);
+// 
+//   printf("start of int header seen in read_record_data_dummy():");
+//   for (i = 0; i < 5; i++)
+//     printf("  %d", ((INTEGER *) int_hdr)[i]);
+//   printf("\n");
+//   printf("start of real header seen in read_record_data_dummy():");
+//   for (i = 0; i < 5; i++)
+//     printf("  %f", ((REAL *) real_hdr)[i]);
+//   printf("\n");
+// 
+//   read_record_data_dummy(nwords, data_return);
+//   return 0;
+// }
+// 
 
 #ifdef MAIN
 int main()

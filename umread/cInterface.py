@@ -68,7 +68,6 @@ class CInterface(object):
         lib_dir = os.path.join(os.path.dirname(__file__) or ".",
                                "c-lib")
         lib_path = os.path.join(lib_dir, lib_name)
-        print lib_path
         self.lib = CT.CDLL(lib_path)
 
     def _is_null_pointer(self, ptr):
@@ -200,7 +199,6 @@ class CInterface(object):
                         ("disk_length", CT.c_size_t),
                         ("_internp", CT.c_void_p)]
         file_p = func(fh, file_type)
-        print file_p, type(file_p), dir(file_p)
         if self._is_null_pointer(file_p):
             raise umfile.UMFileException("file parsing failed")
         file = file_p.contents
@@ -333,6 +331,7 @@ class CInterface(object):
 
         self.lib.read_record_data.argtypes = [ CT.c_int,
                                                CT.c_size_t,
+                                               CT.c_size_t,
                                                CT.c_int,
                                                CT.c_int,
                                                self._get_ctypes_int_array(),
@@ -342,6 +341,7 @@ class CInterface(object):
 
         rv = self.lib.read_record_data(fd,
                                        data_offset,
+                                       disk_length, 
                                        enum_byte_ordering.as_index(byte_ordering),
                                        word_size,
                                        int_hdr,

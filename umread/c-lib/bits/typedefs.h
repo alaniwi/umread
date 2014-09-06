@@ -1,9 +1,7 @@
 #include <inttypes.h>
 
-typedef int32_t int4;
-typedef int64_t int8;
-typedef float real4;
-typedef double real8;
+typedef float float32_t;
+typedef double float64_t;
 
 enum { single_precision, double_precision };
 
@@ -207,8 +205,8 @@ struct _Rec
                        * across the set, but different from sets generated from other
                        * super-variables
                        */
-  real8 mean_period; /* period (in days) of time mean 
-                        (store here so as to calculate once only) */  
+  float64_t mean_period; /* period (in days) of time mean 
+			    (store here so as to calculate once only) */  
 };
 
 /*---------------------------*/

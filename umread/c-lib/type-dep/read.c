@@ -1,43 +1,19 @@
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "umfileint.h"
 
 
 #define file_pos(f) (lseek(f, 0, SEEK_CUR))
 
-void swap_bytes(void *ptr, size_t num_words)
-{
-  int i;
-  char *p;
-  char t;
 
-  p = (char*) ptr;
-  for (i = 0; i < num_words; i++)
-    {
-#define DO_SWAP(x, y) {t = p[x]; p[x] = p[y]; p[y] = t;}
 #if defined(SINGLE)
-      DO_SWAP(3, 0);
-      DO_SWAP(2, 1);
-      p += 4;  
+#define swap_bytes swap_bytes_sgl
 #elif defined(DOUBLE)
-      DO_SWAP(7, 0);
-      DO_SWAP(6, 1);
-      DO_SWAP(5, 2);
-      DO_SWAP(4, 3);
-      p += 8;      
+#define swap_bytes swap_bytes_dbl
 #else
 #error Need to compile this file with -DSINGLE or -DDOUBLE
 #endif
-    }
-}
-
-void swapbytes_if_swapped(void *ptr, 
-				    size_t num_words,
-				    Byte_ordering byte_ordering)
-{
-  if (byte_ordering == REVERSE_ORDERING)
-    swap_bytes(ptr, num_words);
-}
 
 
 /*
@@ -45,15 +21,16 @@ void swapbytes_if_swapped(void *ptr,
  * returns number of words read (i.e. n, unless there's a short read)
  */
 size_t read_words(int fd, 
-			    void *ptr,
-			    size_t num_words,
-			    Byte_ordering byte_ordering)
+		  void *ptr,
+		  size_t num_words,
+		  Byte_ordering byte_ordering)
 {
   size_t nread;
 
   CKP(ptr);
   nread = read(fd, ptr, num_words * WORD_SIZE) / WORD_SIZE;
-  swapbytes_if_swapped(ptr, nread, byte_ordering);
+  if (byte_ordering == REVERSE_ORDERING)
+    swap_bytes(ptr, nread);
   return nread;
   ERRBLKI;
 }
@@ -308,10 +285,9 @@ int read_all_headers_ff(File *file, List *heaplist)
 }
 
 
-int get_ff_disk_length(INTEGER *ihdr)
+size_t get_ff_disk_length(INTEGER *ihdr)
 {
-  
-  /* work out disk length */
+  /* work out disk length in words */
   /* Input array size (packed field):
    *   First try LBNREC
    *   then if Cray 32-bit packing, know ratio of packed to unpacked lengths;
@@ -362,3 +338,104 @@ int get_valid_records_ff(int fd,
   ERRBLKI;
 }
 
+
+int read_record_data_core(int fd, 
+			  size_t data_offset, 
+			  size_t disk_length, 
+			  Byte_ordering byte_ordering, 
+			  const void *int_hdr,
+			  const void *real_hdr,
+			  size_t nwords,
+			  void *data_return)
+{
+  int pack;
+  size_t packed_bytes, nbytes, ipt;
+  void *packed_data;
+  REAL mdi;
+
+  packed_data = NULL;
+
+  CKI(   lseek(fd, data_offset, SEEK_SET)   );
+  pack = get_var_packing(int_hdr);
+
+  if (pack == 0)
+    {
+      /* unpacked data -- read, and byte swap if necessary */
+      ERRIF(   read_words(fd, data_return, nwords, byte_ordering)  != nwords);
+    }
+  else
+    {
+      /* PACKING IN USE */
+
+      /* Complain if not REAL data. In cdunifpp, this test was applied only to Cray 32-bit packing,
+       * but in fact also unwgdos assumes real, so apply to both packing types.
+       */
+      if (get_type(int_hdr) != real_type)
+	{
+	  error_mesg("Unpacking supported only for REAL type data");
+	  ERR;
+	}
+      
+      /* first allocate array and read in packed data */
+      packed_bytes = disk_length * WORD_SIZE;
+
+      /* An exception to the usual strategy heap memory management: no heaplist available, so use plain malloc
+       * and be careful to free even if an error arose.
+       *
+       * (This is fairly much unavoidable: heaplist is attached to a File struct, but these exist only while 
+       * parsing the file metadata, not while the read callback is executed.  A Python File object will exist
+       * in the calling code, but that's not the same thing: it may have been instantiated with parse=False;
+       * see the Python code.)
+       */
+      CKP(   packed_data = malloc(packed_bytes)  );
+      ERRIF(   read(fd, packed_data, packed_bytes)  != packed_bytes   );
+
+      /* NOW UNPACK ACCORDING TO PACKING TYPE (including byte swapping where necessary). */
+      
+      switch(pack)
+	{
+	case 1:
+	  /* WGDOS */
+	  
+	  /* unwgdos routine wants to know number of native integers in input.
+	   * input type might not be native int, so calculate:
+	   */
+	  nbytes = disk_length * WORD_SIZE;
+	  
+	  mdi = get_var_real_fill_value(real_hdr);
+	  
+	  /* Note - even though we read in raw (unswapped) data from the file, we do not 
+	   * byte swap prior to calling unwgdos, as the packed data contains a mixture
+	   * of types of different lengths, so leave it to unwgdos() that knows about
+	   * this and has appropriate byte swapping code.
+	   */
+	  CKI(   unwgdos(packed_data, nbytes, data_return, nwords, mdi)   );
+	  
+	  break;
+	  
+	case 2:
+	  if (byte_ordering == REVERSE_ORDERING)
+	    swap_bytes_sgl(packed_data, packed_bytes / 4);
+	  
+	  for (ipt = 0; ipt < nwords ; ipt++)
+	    ((REAL*) data_return)[ipt] = ((float32_t *) packed_data)[ipt];
+	  
+	  break;
+	  
+	case 3:
+	  error_mesg("GRIB unpacking not supported");
+	  ERR;
+	  
+	  /* break; */
+	default:
+	  SWITCH_BUG;
+	}
+      free(packed_data);
+    }
+  return 0;
+ err:
+  GRIPE;
+  if (packed_data != NULL)
+    free(packed_data);
+  return -1;
+}

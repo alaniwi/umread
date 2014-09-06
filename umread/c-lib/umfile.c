@@ -82,3 +82,31 @@ void file_free(File *file)
  err:
   GRIPE;
 }
+
+
+int read_record_data(int fd, 
+		     size_t data_offset, 
+		     size_t disk_length, 
+		     Byte_ordering byte_ordering, 
+		     int word_size, 
+		     const void *int_hdr,
+		     const void *real_hdr,
+		     size_t nwords, 
+		     void *data_return)
+{
+  errorhandle_init();
+  
+  switch(word_size) 
+    {
+    case 4:
+      CKI(  read_record_data_core_sgl(fd, data_offset, disk_length, byte_ordering, 
+				      int_hdr, real_hdr, nwords, data_return)  );
+      return 0;
+    case 8:
+      CKI(  read_record_data_core_dbl(fd, data_offset, disk_length, byte_ordering, 
+				      int_hdr, real_hdr, nwords, data_return)  );
+      return 0;
+    }
+  /* invalid word size falls through to error return */
+  ERRBLKI;
+}

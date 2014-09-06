@@ -8,7 +8,7 @@ CPP=gcc -E -P
 LD=ld
 LDFLAGS=-shared
 OBJS = umfile.o error.o filetype.o umfile_test.o \
-	malloc.o linklist.o new_structs.o
+	malloc.o linklist.o new_structs.o swap.o
 
 TYPE_DEP_LIBRARY = umfile_typedep.a
 TYPE_DEP_DIR = type-dep

@@ -164,16 +164,20 @@ if __name__ == '__main__':
     #path = "/tmp/xjaroa.pj1991mar.le"
     f = File(path)
     print f.format, f.byte_ordering, f.word_size
-    print len(f.vars)
-    for var in f.vars:
-        print "nz = %s, nt = %s" % (var.nz, var.nt)
-        for rec in var.recs:
+    print "num variables: %s" % len(f.vars)
+    for varno, var in enumerate(f.vars):
+        print 
+        print "var %s: nz = %s, nt = %s" % (varno, var.nz, var.nt)
+        for recno, rec in enumerate(var.recs):
+            print "var %s record %s" % (varno, recno)
             print "hdr offset: %s" % rec.hdr_offset
             print "data offset: %s" % rec.data_offset
             print "disk length: %s" % rec.disk_length
             print "int hdr: %s" % rec.int_hdr
             print "real hdr: %s" % rec.real_hdr
             print "data: %s" % rec.get_data()
+            print "-----------------------"
+        print "==============================="
     f.close_fd()
     
     # also read a record using saved metadata
@@ -198,3 +202,11 @@ if __name__ == '__main__':
     print "int hdr: %s" % rnew.int_hdr
     print "real hdr: %s" % rnew.real_hdr
     print "data: %s" % rnew.get_data()
+
+    print "nx = %s" % rnew.int_hdr[18]
+    print "ny = %s" % rnew.int_hdr[17]
+    #rdata = open("recdata0.txt", "w")
+    #for value in rnew.get_data():
+    #    rdata.write("%s\n" % value)
+    #rdata.close()
+

@@ -21,7 +21,8 @@ Data_type get_type(const INTEGER *int_hdr)
     }
 }
 
-size_t get_data_length (const INTEGER *int_hdr) 
+/* get data length in words */
+size_t get_data_length(const INTEGER *int_hdr) 
 {
   size_t datalen;
 
@@ -100,4 +101,19 @@ int get_var_compression(const INTEGER *int_hdr)
 int get_var_gridcode(const INTEGER *int_hdr)
 {
   return int_hdr[INDEX_LBCODE];
+}
+
+
+int get_var_packing(const INTEGER *int_hdr)
+{
+   return int_hdr[INDEX_LBPACK] % 10;
+}
+
+
+/* get the fill value from the floating point header.
+ * caller needs to check that it is actually floating point data!
+ */
+REAL get_var_real_fill_value(const REAL *real_hdr)
+{
+  return real_hdr[INDEX_BMDI];
 }

@@ -6,18 +6,18 @@
 
 
 /* values passed to valid_um_word2 and valid_pp_word1 could be 32 or
- * 64-bit.  Declare as longer of these two (int8), and shorter will be
+ * 64-bit.  Declare as longer of these two (int64_t), and shorter will be
  * accommodated also.
  */
 
-static int valid_um_word2(int8 val)
+static int valid_um_word2(int64_t val)
 {
   /* second word should be 1,2 or 4, reflecting model ID in fixed length
      header */
   return (val == 1 || val == 2 || val == 4);
 }
 
-static int valid_pp_word1(int8 val, int wsize)
+static int valid_pp_word1(int64_t val, int wsize)
 {
   /* first word should be integer from Fortan representing length of header
      record */
@@ -26,8 +26,8 @@ static int valid_pp_word1(int8 val, int wsize)
 
 int detect_file_type_(int fd, File_type *file_type)
 {
-  int4 data4[4], data4s[4];
-  int8 data8[2], data8s[2];
+  int32_t data4[4], data4s[4];
+  int64_t data8[2], data8s[2];
 
   /* read and store first two integers according to suppositions 
    * of 4- or 8- byte, and native or swapped byte ordering

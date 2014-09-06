@@ -25,7 +25,7 @@ int is_time_mean(INTEGER LBTIM)
 
 REAL time_diff(INTEGER lbtim, const Date *date, const Date *orig_date)
 {
-  int8 secs;
+  int64_t secs;
 
   switch(calendar_type(lbtim))
     {
@@ -39,7 +39,7 @@ REAL time_diff(INTEGER lbtim, const Date *date, const Date *orig_date)
 	      60 * (date->hour - orig_date->hour + 
 		    24 * (date->day - orig_date->day + 
 			  30 * (date->month - orig_date->month +
-				12 * (int8) (date->year - orig_date->year) ))));
+				12 * (int64_t) (date->year - orig_date->year) ))));
       
       return sec_to_day(secs);
       break; /* notreached */
@@ -48,25 +48,24 @@ REAL time_diff(INTEGER lbtim, const Date *date, const Date *orig_date)
 	date->second - orig_date->second + 
 	60 * (date->minute - orig_date->minute + 
 	      60 * (date->hour - orig_date->hour + 
-		    24 * (int8) (date->day - orig_date->day)));
+		    24 * (int64_t) (date->day - orig_date->day)));
       
       return sec_to_day(secs);
       break; /* notreached */
     default:
-      switch_bug("time_diff");
-      ERR;
+      SWITCH_BUG;
     }  
   ERRBLKF;
 }
 
-REAL sec_to_day(int8 seconds)
+REAL sec_to_day(int64_t seconds)
 {
   /* convert seconds to days, avoiding rounding where possible 
    * by using integer arithmetic for the whole days
    */
   const int secs_per_day = 86400;
   
-  int8 days, remainder;
+  int64_t days, remainder;
   days = seconds / secs_per_day;
   remainder = seconds % secs_per_day;
 
@@ -89,8 +88,7 @@ Calendar_type calendar_type(INTEGER type)
       return cal360day;
       break; /* notreached */
     default:
-      switch_bug("calendar_type");
-      ERR;    
+      SWITCH_BUG;
   }
 
   /* on error return -1 (though only useful to calling routine if stored in an int
@@ -99,7 +97,7 @@ Calendar_type calendar_type(INTEGER type)
   ERRBLKI;
 }
 
-int8 gregorian_to_secs(const Date *date)
+int64_t gregorian_to_secs(const Date *date)
 {
   /* Convert from Gregorian calendar to seconds since a fixed origin
    * 
@@ -120,7 +118,7 @@ int8 gregorian_to_secs(const Date *date)
   const int sih = 3600;
   const int sim = 60;
 
-  int8 nsec;
+  int64_t nsec;
   int year,nleap,nday,isleap;
 
   /* offsets from 1st Jan to 1st of each month in non-leap year */
@@ -141,7 +139,7 @@ int8 gregorian_to_secs(const Date *date)
 
   nday = (year * 365) + dayno[date->month - 1] + (date->day - 1) + nleap;
 
-  nsec = (int8) nday * sid + date->hour * sih + date->minute * sim + date->second;
+  nsec = (int64_t) nday * sid + date->hour * sih + date->minute * sim + date->second;
 
   return nsec;
 }

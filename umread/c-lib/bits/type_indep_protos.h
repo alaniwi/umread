@@ -13,6 +13,14 @@ void *dup_(const void *inptr, size_t size, List *heaplist);
 int free_(void *ptr, List *heaplist);
 int free_all(List *heaplist);
 
+/* swap.c */
+/* NB the _sgl and _dbl functions are explicitly coded, hence not handled by type_dep 
+ * (reason: even in the DOUBLE case, we need swap_bytes_sgl available for 32-bit packed data)
+ */
+void swap_bytes_sgl(void *ptr, size_t num_words);
+void swap_bytes_dbl(void *ptr, size_t num_words);
+int16_t int16_swap_bytes(int16_t x);
+
 /* linklist.c */
 typedef int(*free_func) (void *, List *);
 

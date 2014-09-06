@@ -36,7 +36,7 @@ void *malloc_(size_t size, List *heaplist){
   if (size == 0)
     return NULL;
 
-  /* The only call to malloc in umfile c-lib (except unwgdos) */
+  /* The only call to malloc in umfile c-lib (except in unwgdos.c and packed_data in read.c) */
   ptr = malloc(size + extrasize);
   //debug("malloc: %d(+%d) -> %p", size, extrasize, ptr);
 

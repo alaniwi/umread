@@ -181,21 +181,21 @@
 // }
 // 
 
-int read_record_data(int fd, 
-		     size_t data_offset, 
-		     size_t disk_length, 
-		     Byte_ordering byte_ordering, 
-		     int word_size, 
-		     const void *int_hdr,
-		     const void *real_hdr,
-		     size_t nwords, 
-		     void *data_return)
-{
-  return read_record_data_core_sgl(fd, data_offset, disk_length, byte_ordering, word_size,
-				   int_hdr, real_hdr, nwords, data_return);
-}
-
-
+//int read_record_data(int fd, 
+//		     size_t data_offset, 
+//		     size_t disk_length, 
+//		     Byte_ordering byte_ordering, 
+//		     int word_size, 
+//		     const void *int_hdr,
+//		     const void *real_hdr,
+//		     size_t nwords, 
+//		     void *data_return)
+//{
+//  return read_record_data_core_sgl(fd, data_offset, disk_length, byte_ordering, word_size,
+//				   int_hdr, real_hdr, nwords, data_return);
+//}
+//
+//
 // void read_header_dummy(size_t header_offset, 
 // 		       void *int_hdr_rtn,
 // 		       void *real_hdr_rtn) 

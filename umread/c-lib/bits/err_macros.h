@@ -29,6 +29,7 @@
 #define ERRIF(i) if (i){ ERR }
 
 #define GRIPE gripe(__func__);
+#define SWITCH_BUG switch_bug(__func__); ERR;
 #define ERRBLK(rtn) err: GRIPE; return (rtn);
 #define ERRBLKI ERRBLK(-1);
 #define ERRBLKP ERRBLK(NULL);

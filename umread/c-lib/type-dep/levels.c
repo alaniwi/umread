@@ -3,7 +3,7 @@
 
 int lev_set(Level *lev, const Rec *rec) 
 {  
-  lev->type         = level_type(rec);
+  lev->type = level_type(rec);
 
   switch (lev->type) 
     {
