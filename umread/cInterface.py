@@ -13,34 +13,65 @@ class File_type(CT.Structure):
                 ("byte_ordering", CT.c_int),
                 ("word_size", CT.c_int)]
 
-class Rec(CT.Structure):
-    """
-    ctypes object corresponding to the Rec object in the C code
-    """
-    # defer setting _fields_ as this depends on 
-    # file data type for correct interpretation of the 
-    # void* used for each of int and real PP header data
-    pass
 
-class Var(CT.Structure):
+def _get_ctypes_array(dtype, size=None):
     """
-    ctypes object corresponding to the Var object in the C code
+    get ctypes corresponding to a numpy array of a given type;
+    the size should not be necessary unless the storage for the array 
+    is allocated in the C code
     """
-    _fields_ = [("recs", CT.POINTER(CT.POINTER(Rec))),
-                ("nz", CT.c_int),
-                ("nt", CT.c_int),
-                ("supervar_index", CT.c_int),
-                ("_internp", CT.c_void_p)]
+    kwargs = {'dtype': dtype,
+              'ndim': 1,
+              'flags': ('C_CONTIGUOUS', 'WRITEABLE')}
+    if size:
+        kwargs['shape'] = (size,)
+    return numpy.ctypeslib.ndpointer(**kwargs)
 
-class File(CT.Structure):
+def _gen_rec_class(int_type, float_type):
+    class Rec(CT.Structure):
+        _fields_ = [("int_hdr", _get_ctypes_array(int_type, _len_int_hdr)),
+                    ("real_hdr", _get_ctypes_array(float_type, _len_real_hdr)),
+                    ("header_offset", CT.c_size_t),
+                    ("data_offset", CT.c_size_t),
+                    ("disk_length", CT.c_size_t),
+                    ("_internp", CT.c_void_p)]
     """
-    ctypes object corresponding to the File object in the C code
+    ctypes object corresponding to the Rec object in the C code, 
     """
-    _fields_ = [("fd", CT.c_int),
-                ("file_type", File_type),
-                ("nvars", CT.c_int),
-                ("vars", CT.POINTER(CT.POINTER(Var))),
-                ("_internp", CT.c_void_p)]
+    return Rec
+
+Rec32 = _gen_rec_class(numpy.int32, numpy.float32)
+Rec64 = _gen_rec_class(numpy.int64, numpy.float64)
+
+def _gen_var_class(rec_class):
+    class Var(CT.Structure):
+        """
+        ctypes object corresponding to the Var object in the C code
+        """
+        _fields_ = [("recs", CT.POINTER(CT.POINTER(rec_class))),
+                    ("nz", CT.c_int),
+                    ("nt", CT.c_int),
+                    ("supervar_index", CT.c_int),
+                    ("_internp", CT.c_void_p)]
+    return Var
+
+Var32 = _gen_var_class(Rec32)
+Var64 = _gen_var_class(Rec64)
+
+def _gen_file_class(var_class):
+    class File(CT.Structure):
+        """
+        ctypes object corresponding to the File object in the C code
+        """
+        _fields_ = [("fd", CT.c_int),
+                    ("file_type", File_type),
+                    ("nvars", CT.c_int),
+                    ("vars", CT.POINTER(CT.POINTER(var_class))),
+                    ("_internp", CT.c_void_p)]
+    return File
+
+File32 = _gen_file_class(Var32)
+File64 = _gen_file_class(Var64)
 
 class Enum(object):
     def __init__(self, *names):
@@ -138,32 +169,21 @@ class CInterface(object):
             word_size = val
 
         if word_size == 4:
+            self.file_class = File32
             self.file_data_int_type = numpy.int32
             self.file_data_real_type = numpy.float32
         elif word_size == 8:
+            self.file_class = File64
             self.file_data_int_type = numpy.int64
             self.file_data_real_type = numpy.float64
         else:
             raise ValueError("word size must be 4 or 8 (not %s)" % word_size)
 
-    def _get_ctypes_array(self, dtype, size=None):
-        """
-        get ctypes corresponding to a numpy array of a given type;
-        the size should not be necessary unless the storage for the array 
-        is allocated in the C code
-        """
-        kwargs = {'dtype': dtype,
-                  'ndim': 1,
-                  'flags': ('C_CONTIGUOUS', 'WRITEABLE')}
-        if size:
-            kwargs['shape'] = (size,)
-        return numpy.ctypeslib.ndpointer(**kwargs)
-
     def _get_ctypes_int_array(self, size=None):
-        return self._get_ctypes_array(self.file_data_int_type, size)
+        return _get_ctypes_array(self.file_data_int_type, size)
 
     def _get_ctypes_real_array(self, size=None):
-        return self._get_ctypes_array(self.file_data_real_type, size)
+        return _get_ctypes_array(self.file_data_real_type, size)
     
     def _get_empty_real_array(self, size):
         """
@@ -190,14 +210,8 @@ class CInterface(object):
                                create_file_type()                               
         """
         func = self.lib.file_parse
-        file_p_type = CT.POINTER(File)
+        file_p_type = CT.POINTER(self.file_class)
         func.restype = file_p_type
-        Rec._fields_ = [("int_hdr", self._get_ctypes_int_array(_len_int_hdr)),
-                        ("real_hdr", self._get_ctypes_real_array(_len_real_hdr)),
-                        ("header_offset", CT.c_size_t),
-                        ("data_offset", CT.c_size_t),
-                        ("disk_length", CT.c_size_t),
-                        ("_internp", CT.c_void_p)]
         file_p = func(fh, file_type)
         if self._is_null_pointer(file_p):
             raise umfile.UMFileException("file parsing failed")
