@@ -29,15 +29,15 @@ def _get_ctypes_array(dtype, size=None):
 
 def _gen_rec_class(int_type, float_type):
     class Rec(CT.Structure):
+    """
+    ctypes object corresponding to the Rec object in the C code, 
+    """
         _fields_ = [("int_hdr", _get_ctypes_array(int_type, _len_int_hdr)),
                     ("real_hdr", _get_ctypes_array(float_type, _len_real_hdr)),
                     ("header_offset", CT.c_size_t),
                     ("data_offset", CT.c_size_t),
                     ("disk_length", CT.c_size_t),
                     ("_internp", CT.c_void_p)]
-    """
-    ctypes object corresponding to the Rec object in the C code, 
-    """
     return Rec
 
 Rec32 = _gen_rec_class(numpy.int32, numpy.float32)
