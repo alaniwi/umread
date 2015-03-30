@@ -36,11 +36,34 @@ size_t read_words(int fd,
 }
 
 
+int read_extra_data_core(int fd,
+			 size_t extra_data_offset,
+			 size_t extra_data_length, 
+			 Byte_ordering byte_ordering, 
+			 void *extra_data_rtn)
+{
+  /* reads extra data into storage provided by the caller
+   * The caller must provide the offset and length, obtained 
+   * by a previous call to get_extra_data_offset_and_length()
+   */
+  size_t extra_data_words;
+
+  extra_data_words = extra_data_length / WORD_SIZE;
+
+  CKI(  lseek(fd, extra_data_offset, SEEK_SET)  );
+  ERRIF(   extra_data_length % WORD_SIZE != 0   );
+  ERRIF(   read_words(fd, extra_data_rtn, 
+		      extra_data_words, byte_ordering)   != extra_data_words);
+  return 0;
+  ERRBLKI;    
+}
+
+
 int read_hdr_at_offset(int fd,
-				 size_t header_offset,
-				 Byte_ordering byte_ordering, 
-				 INTEGER *int_hdr_rtn,
-				 REAL *real_hdr_rtn)
+		       size_t header_offset,
+		       Byte_ordering byte_ordering, 
+		       INTEGER *int_hdr_rtn,
+		       REAL *real_hdr_rtn)
 {
   /* as read_hdr below, but also specifying the file offset in bytes */
 
@@ -51,9 +74,9 @@ int read_hdr_at_offset(int fd,
 
 
 int read_hdr(int fd,
-		       Byte_ordering byte_ordering, 
-		       INTEGER *int_hdr_rtn,
-		       REAL *real_hdr_rtn)
+	     Byte_ordering byte_ordering, 
+	     INTEGER *int_hdr_rtn,
+	     REAL *real_hdr_rtn)
 {
   /* reads a PP header at specified word offset into storage 
      provided by the caller */
@@ -111,7 +134,7 @@ int read_all_headers(File *file, List *heaplist)
   ERRBLKI;
 }
 
-/* skip_fortran_record: skips a fortran record, and returns how big it was,
+/* skip_fortran_record: skips a fortran record, and returns how big it was (in bytes),
  *  or -1 for end of file, or -2 for any error which may imply corrupt file
  * (return value of 0 is a legitimate empty record).
  */
@@ -188,7 +211,6 @@ int read_all_headers_pp(File *file, List *heaplist)
 int read_all_headers_ff(File *file, List *heaplist)
 {
   int fd;
-  int is_fields_file;
   size_t hdr_start, hdr_size, header_offset, data_offset_calculated, data_offset_specified;
   int *valid, n_valid_rec, n_raw_rec, i_valid_rec, i_raw_rec;
   Byte_ordering byte_ordering;
@@ -211,9 +233,6 @@ int read_all_headers_ff(File *file, List *heaplist)
 
   CKI(   lseek(fd, 159 * WORD_SIZE, SEEK_SET)  );
   READ_ITEM(start_data);
-
-  /* fieldsfiles includes ancillary files and initial dumps */
-  is_fields_file = (dataset_type == 1 || dataset_type == 3 || dataset_type == 4);
 
   /* (first dim of lookup documented as being 64 or 128, so 
    * allow header longer than n_hdr (64) -- discarding excess -- but not shorter)
@@ -259,7 +278,7 @@ int read_all_headers_ff(File *file, List *heaplist)
 	  rec->data_offset =
 	    (data_offset_specified != 0) ? data_offset_specified : data_offset_calculated;
 	  
-	  data_offset_calculated += rec->disk_length * WORD_SIZE;
+	  data_offset_calculated += rec->disk_length;
 
 	  i_valid_rec++;
 	}
@@ -273,22 +292,17 @@ int read_all_headers_ff(File *file, List *heaplist)
 
 size_t get_ff_disk_length(INTEGER *ihdr)
 {
-  /* work out disk length in words */
+  /* work out disk length in bytes */
   /* Input array size (packed field):
    *   First try LBNREC
    *   then if Cray 32-bit packing, know ratio of packed to unpacked lengths;
    *   else use LBLREC
    */
-  size_t datalen;
-
   if (ihdr[INDEX_LBPACK] != 0 && ihdr[INDEX_LBNREC] != 0) 
-    return ihdr[INDEX_LBNREC];
+    return ihdr[INDEX_LBNREC] * WORD_SIZE;
   if (ihdr[INDEX_LBPACK] % 10 == 2)
-    {
-      datalen = get_data_length(ihdr);
-      return datalen * 4 / WORD_SIZE;
-    }
-  return ihdr[INDEX_LBLREC];
+      return get_num_data_words(ihdr) * 4;
+  return ihdr[INDEX_LBLREC] * WORD_SIZE;
 }
 
 
@@ -297,9 +311,9 @@ size_t get_ff_disk_length(INTEGER *ihdr)
  *  and also provide the total count
  */
 int get_valid_records_ff(int fd,
-				   Byte_ordering byte_ordering,
-				   size_t hdr_start, size_t hdr_size, int n_raw_rec,
-				   int valid[], int *n_valid_rec_return)
+			 Byte_ordering byte_ordering,
+			 size_t hdr_start, size_t hdr_size, int n_raw_rec,
+			 int valid[], int *n_valid_rec_return)
 {
   int n_valid_rec, irec;
   INTEGER lbbegin;
@@ -335,7 +349,7 @@ int read_record_data_core(int fd,
 			  void *data_return)
 {
   int pack;
-  size_t packed_bytes, nbytes, ipt;
+  size_t packed_bytes, ipt;
   void *packed_data;
   REAL mdi;
 
@@ -363,7 +377,22 @@ int read_record_data_core(int fd,
 	}
       
       /* first allocate array and read in packed data */
-      packed_bytes = disk_length * WORD_SIZE;
+
+      /* disk_length includes extra data, so subtract off */
+      packed_bytes = disk_length - get_extra_data_length(int_hdr);
+
+      /* ----------------------------
+       * Possible alternative envisaged, that reads in slightly more data to
+       * give tolerance against any situation where LBNREC does not include
+       * the extra data.  However, this is now of dubious gain because reading in 
+       * the extra data requires LBNREC to be used consistently so that the extra 
+       * data can be found at the end of the record where the packed data that precedes
+       * it is of variable length.
+       * 
+       *       packed_bytes = disk_length;
+       *-----------------------------
+       */
+
 
       /* An exception to the usual strategy heap memory management: no heaplist available, so use plain malloc
        * and be careful to free even if an error arose.
@@ -386,8 +415,6 @@ int read_record_data_core(int fd,
 	  /* unwgdos routine wants to know number of native integers in input.
 	   * input type might not be native int, so calculate:
 	   */
-	  nbytes = disk_length * WORD_SIZE;
-	  
 	  mdi = get_var_real_fill_value(real_hdr);
 	  
 	  /* Note - even though we read in raw (unswapped) data from the file, we do not 
@@ -395,7 +422,7 @@ int read_record_data_core(int fd,
 	   * of types of different lengths, so leave it to unwgdos() that knows about
 	   * this and has appropriate byte swapping code.
 	   */
-	  CKI(   unwgdos(packed_data, nbytes, data_return, nwords, mdi)   );
+	  CKI(   unwgdos(packed_data, packed_bytes, data_return, nwords, mdi)   );
 	  
 	  break;
 	  

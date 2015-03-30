@@ -3,21 +3,48 @@
 
 #include "umfileint.h"
 
-int get_type_and_length(int word_size,
-			const void *int_hdr,
-			Data_type *type_rtn,
-			size_t *num_words_rtn)
+int get_type_and_num_words(int word_size,
+			   const void *int_hdr,
+			   Data_type *type_rtn,
+			   size_t *num_words_rtn)
 {
   errorhandle_init();
   switch (word_size)
     {
     case 4:
-      return get_type_and_length_core_sgl(int_hdr, type_rtn, num_words_rtn);
+      return get_type_and_num_words_core_sgl(int_hdr, type_rtn, num_words_rtn);
     case 8:
-      return get_type_and_length_core_dbl(int_hdr, type_rtn, num_words_rtn);
+      return get_type_and_num_words_core_dbl(int_hdr, type_rtn, num_words_rtn);
     default:
       return -1;
     }
+}
+
+int get_extra_data_offset_and_length(int word_size, 
+				     const void *int_hdr,
+				     size_t data_offset,
+				     size_t disk_length,
+				     size_t *extra_data_offset_rtn,
+				     size_t *extra_data_length_rtn)
+{
+  errorhandle_init();
+  switch (word_size)
+    {
+    case 4:
+      return get_extra_data_offset_and_length_core_sgl(int_hdr,
+						       data_offset,
+						       disk_length,
+						       extra_data_offset_rtn,
+						       extra_data_length_rtn);
+    case 8:
+      return get_extra_data_offset_and_length_core_dbl(int_hdr,
+						       data_offset,
+						       disk_length,
+						       extra_data_offset_rtn,
+						       extra_data_length_rtn);
+    default:
+      return -1;
+    }  
 }
 
 int detect_file_type(int fd, File_type *file_type)
@@ -26,6 +53,32 @@ int detect_file_type(int fd, File_type *file_type)
   return detect_file_type_(fd, file_type);
 }
 
+int read_extra_data(int fd,
+		    size_t extra_data_offset,
+		    size_t extra_data_length,
+		    Byte_ordering byte_ordering,
+		    int word_size,
+		    void *extra_data_return)
+{
+  errorhandle_init();
+  switch (word_size)
+    {
+    case 4:
+      return read_extra_data_core_sgl(fd,
+				      extra_data_offset,
+				      extra_data_length,
+				      byte_ordering,
+				      extra_data_return);
+    case 8:
+      return read_extra_data_core_dbl(fd,
+				      extra_data_offset,
+				      extra_data_length,
+				      byte_ordering,
+				      extra_data_return);
+    default:
+      return -1;
+    }
+}
 
 int read_header(int fd,
 		size_t header_offset,

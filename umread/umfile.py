@@ -41,6 +41,7 @@ class File(object):
         c = cInterface.CInterface()
         self.c_interface = c
         self.path = path
+        self.fd = None
         self.open_fd()
         if byte_ordering and word_size and format:
             self.format = format
@@ -60,7 +61,8 @@ class File(object):
         """
         (Re)open the low-level file descriptor.
         """
-        self.fd = os.open(self.path, os.O_RDONLY)
+        if self.fd is None:
+            self.fd = os.open(self.path, os.O_RDONLY)
         return self.fd
 
     def close_fd(self):
@@ -139,13 +141,34 @@ class Rec(object):
                                           file.word_size)
         return cls(int_hdr, real_hdr, hdr_offset, data_offset, disk_length, file=file)
 
+    def get_extra_data(self):
+        """
+        get the extra data associated with the record
+        """
+        c = self.file.c_interface
+        file = self.file
+
+        extra_data_offset, extra_data_length = \
+            c.get_extra_data_offset_and_length(self.int_hdr,
+                                               self.data_offset, 
+                                               self.disk_length)
+        
+        raw_extra_data = c.read_extra_data(file.fd,
+                                           extra_data_offset,
+                                           extra_data_length,
+                                           file.byte_ordering, 
+                                           file.word_size)
+
+        print "PLACEHOLDER: returning length of raw data"
+        return [len(raw_extra_data)]
+        
     def get_data(self):
         """
         get the data array associated with the record
         """
         c = self.file.c_interface
         file = self.file
-        data_type, nwords = c.get_type_and_length(self.int_hdr)
+        data_type, nwords = c.get_type_and_num_words(self.int_hdr)
         print "data_type = %s nwords = %s" % (data_type, nwords)
         return c.read_record_data(file.fd,
                                   self.data_offset,
@@ -159,9 +182,9 @@ class Rec(object):
 
 if __name__ == '__main__':
 
-    path = "test.pp"
-    #path = "/tmp/xjaroa.pj1991mar"
-    #path = "/tmp/xjaroa.pj1991mar.le"
+    import sys
+    
+    path = sys.argv[1]
     f = File(path)
     print f.format, f.byte_ordering, f.word_size
     print "num variables: %s" % len(f.vars)
@@ -176,6 +199,7 @@ if __name__ == '__main__':
             print "int hdr: %s" % rec.int_hdr
             print "real hdr: %s" % rec.real_hdr
             print "data: %s" % rec.get_data()
+            print "extra_data: %s" % rec.get_extra_data()
             print "-----------------------"
         print "==============================="
     f.close_fd()
@@ -202,11 +226,12 @@ if __name__ == '__main__':
     print "int hdr: %s" % rnew.int_hdr
     print "real hdr: %s" % rnew.real_hdr
     print "data: %s" % rnew.get_data()
+    print "extra data: %s" % rnew.get_extra_data()
 
     print "nx = %s" % rnew.int_hdr[18]
     print "ny = %s" % rnew.int_hdr[17]
-    #rdata = open("recdata0.txt", "w")
-    #for value in rnew.get_data():
-    #    rdata.write("%s\n" % value)
-    #rdata.close()
+    rdata = open("recdata0.txt", "w")
+    for value in rnew.get_data():
+        rdata.write("%s\n" % value)
+    rdata.close()
 

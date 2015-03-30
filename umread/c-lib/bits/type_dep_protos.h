@@ -1,9 +1,15 @@
 /* interpret_header.c */
 Data_type get_type(const INTEGER *int_hdr);
-size_t get_data_length (const INTEGER *int_hdr);
-int get_type_and_length_core(const INTEGER *int_hdr,
-			     Data_type *type_rtn,
-			     size_t *num_words_rtn);
+size_t get_num_data_words (const INTEGER *int_hdr);
+int get_type_and_num_words_core(const INTEGER *int_hdr,
+				Data_type *type_rtn,
+				size_t *num_words_rtn);
+size_t get_extra_data_length(const INTEGER *int_hdr);
+size_t get_extra_data_offset_and_length_core(const INTEGER *int_hdr,
+					     size_t data_offset,
+					     size_t disk_length,
+					     size_t *extra_data_offset_rtn,
+					     size_t *extra_data_length_rtn);
 int var_is_missing(const INTEGER *int_hdr);
 int get_var_stash_model(const INTEGER *int_hdr);
 int get_var_stash_section(const INTEGER *int_hdr);
@@ -18,6 +24,12 @@ size_t read_words(int fd,
 		  void *ptr,
 		  size_t num_words,
 		  Byte_ordering byte_ordering);
+
+int read_extra_data_at_offset(int fd,
+			      size_t extra_data_offset,
+			      size_t extra_data_length,
+			      Byte_ordering byte_ordering, 
+			      void *extra_data_rtn);
 
 int read_hdr_at_offset(int fd,
 		       size_t header_offset,

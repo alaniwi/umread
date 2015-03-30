@@ -164,3 +164,41 @@ int read_record_data(int fd,
    Return value is 0 for success, 1 for failure.
 */
 /* ------------------------------------------------------------------- */
+
+
+int get_extra_data_offset_and_length(int word_size, 
+				     const void *int_hdr,
+				     size_t data_offset,
+				     size_t disk_length,
+				     size_t *extra_data_offset_rtn,
+				     size_t *extra_data_length_rtn);
+/*
+  Parses integer PP header in conjunction with data offset and length
+  (where the length includes the extra data), to works out the offset
+  and length of extra data
+
+  Caller provides integer header as array of 4 or 8 byte ints 
+  as appropriate to passed word_size, and provides storage for 
+  returned info.
+
+  Return value is length, or -1 on failure
+ */
+
+int read_extra_data(int fd,
+		    size_t extra_data_offset,
+		    size_t extra_data_length,
+		    Byte_ordering byte_ordering,
+		    int word_size,
+		    void *extra_data_return);
+
+/* 
+   Reads extra data at specified offset; function will do byte-swapping 
+   as necessary.
+
+   Returns raw data (aside from the byte swapping) in extra_data_return;
+   caller must provide storage of size extra_data_length * word_size bytes,
+   and extra_data_length must have been obtained by calling 
+   get_extra_data_length().
+
+   Return value is 0 for success, 1 for failure.
+*/

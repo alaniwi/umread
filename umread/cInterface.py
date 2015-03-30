@@ -29,9 +29,9 @@ def _get_ctypes_array(dtype, size=None):
 
 def _gen_rec_class(int_type, float_type):
     class Rec(CT.Structure):
-    """
-    ctypes object corresponding to the Rec object in the C code, 
-    """
+        """
+        ctypes object corresponding to the Rec object in the C code, 
+        """
         _fields_ = [("int_hdr", _get_ctypes_array(int_type, _len_int_hdr)),
                     ("real_hdr", _get_ctypes_array(float_type, _len_real_hdr)),
                     ("header_offset", CT.c_size_t),
@@ -255,7 +255,7 @@ class CInterface(object):
         disk_length = c_rec.disk_length
         return umfile.Rec(int_hdr, real_hdr, header_offset, data_offset, disk_length)
 
-    def get_type_and_length(self, int_hdr):
+    def get_type_and_num_words(self, int_hdr):
         """
         from integer header, work out data type and number of words to read
         (read_record_data requires this)
@@ -265,19 +265,40 @@ class CInterface(object):
            number of words
         """
         word_size = int_hdr.itemsize
-        self.lib.get_type_and_length.argtypes = [ CT.c_int,
-                                                  self._get_ctypes_int_array(),
-                                                  CT.POINTER(CT.c_int),
-                                                  CT.POINTER(CT.c_size_t) ]
+        self.lib.get_type_and_num_words.argtypes = [ CT.c_int,
+                                                     self._get_ctypes_int_array(),
+                                                     CT.POINTER(CT.c_int),
+                                                     CT.POINTER(CT.c_size_t) ]
         data_type = CT.c_int()
         num_words = CT.c_size_t()
-        rv = self.lib.get_type_and_length(word_size, 
-                                          int_hdr, 
-                                          CT.pointer(data_type), 
-                                          CT.pointer(num_words))
+        rv = self.lib.get_type_and_num_words(word_size, 
+                                             int_hdr, 
+                                             CT.pointer(data_type), 
+                                             CT.pointer(num_words))
         if rv != 0:
             raise umfile.UMFileException("error determining data type and size from integer header")
         return enum_data_type.as_name(data_type.value), num_words.value
+
+    def get_extra_data_offset_and_length(self, int_hdr, data_offset, disk_length):
+        """
+        from integer header, gets offset and length of extra data
+        returns 2-tuple (offset, length), both in units of BYTES
+        """
+        word_size = int_hdr.itemsize
+        func = self.lib.get_extra_data_offset_and_length
+        func.argtypes = [ CT.c_int, 
+                          self._get_ctypes_int_array(), 
+                          CT.c_size_t,
+                          CT.c_size_t,
+                          CT.POINTER(CT.c_size_t),
+                          CT.POINTER(CT.c_size_t) ]
+        extra_data_offset = CT.c_size_t()
+        extra_data_length = CT.c_size_t()
+        rv = func(word_size, int_hdr, data_offset, disk_length, 
+                  CT.pointer(extra_data_offset), CT.pointer(extra_data_length))
+        if rv != 0:
+            raise umfile.UMFileException("error determining extra data length from integer header")
+        return extra_data_offset.value, extra_data_length.value
 
     def read_header(self,
                     fd, 
@@ -307,6 +328,44 @@ class CInterface(object):
         
         return int_hdr, real_hdr
 
+    def read_extra_data(self,
+                        fd,
+                        extra_data_offset,
+                        extra_data_length,
+                        byte_ordering, 
+                        word_size):
+        """
+        reads record data from open file
+
+        inputs:
+           fd - integer low-level file descriptor
+           extra_data_offset - offset in bytes
+           extra_disk_length - disk length of extra data in bytes
+           byte_ordering - 'little_endian' or 'big_endian'
+           word_size - 4 or 8
+
+        returns: extra data as string)
+        """
+        
+        extra_data = "\0" * extra_data_length
+
+        self.lib.read_extra_data.argtypes = [ CT.c_int,
+                                              CT.c_size_t,
+                                              CT.c_size_t,
+                                              CT.c_int,
+                                              CT.c_int,
+                                              CT.c_char_p ]
+
+        rv = self.lib.read_extra_data(fd,
+                                      extra_data_offset,
+                                      extra_data_length, 
+                                      enum_byte_ordering.as_index(byte_ordering),
+                                      word_size,
+                                      extra_data)
+        if rv != 0:
+            raise UMFileException("error reading extra data")
+        
+        return extra_data
 
     def read_record_data(self,
                          fd,
@@ -331,9 +390,8 @@ class CInterface(object):
            real_hdr - real PP headers (numpy array)
            data_type - 'integer' or 'real'
            nwords - number of words to read
-              type and nwords should have been returned by get_type_and_length()
+              type and nwords should have been returned by get_type_and_num_words()
         """
-        
         if data_type == 'integer':
             data = self._get_empty_int_array(nwords)
             ctypes_data = self._get_ctypes_int_array()
@@ -370,8 +428,10 @@ class CInterface(object):
 
 
 if __name__ == "__main__":
+    import sys
+
     c = CInterface()
-    fd = 3
+    fd = os.open(sys.argv[1], os.O_RDONLY)
     file_type = c.detect_file_type(fd)
     print c.file_type_obj_to_dict(file_type)
     c.set_word_size(file_type)
@@ -381,20 +441,34 @@ if __name__ == "__main__":
         print "nz = %s, nt = %s" % (var.nz, var.nt)
         for rec in var.recs:
             print rec.hdr_offset
-            print rec.data_offset
-            print rec.int_hdr
-            print rec.real_hdr
-            data_type, nwords = c.get_type_and_length(rec.int_hdr)
+            print "data offset", rec.data_offset
+            print "disk length", rec.disk_length
+            print "int hdr", rec.int_hdr
+            print "real hdr", rec.real_hdr
+            data_type, nwords = c.get_type_and_num_words(rec.int_hdr)
             print "data_type = %s nwords = %s" % (data_type, nwords)
             data = c.read_record_data(fd,
                                       rec.data_offset,
+                                      rec.disk_length,
                                       file_type.byte_ordering,
                                       file_type.word_size,
                                       rec.int_hdr,
                                       rec.real_hdr,
                                       data_type, 
                                       nwords)
-            print data
+            print "data (%s values): %s ... %s" % (len(data), data[:10], data[-10:])
+            extra_data_offset, extra_data_length = \
+                c.get_extra_data_offset_and_length(rec.int_hdr,
+                                                   rec.data_offset, 
+                                                   rec.disk_length)
+            print "extra data offset: %s" % extra_data_offset
+            print "extra data length: %s" % extra_data_length
+            extra_data = c.read_extra_data(fd,
+                                           extra_data_offset,
+                                           extra_data_length,
+                                           file_type.byte_ordering, 
+                                           file_type.word_size)
+            print "extra data (%s bytes) read" % (len(extra_data))
 
     print c.read_header(fd,
                         info['vars'][0].recs[0].hdr_offset,
