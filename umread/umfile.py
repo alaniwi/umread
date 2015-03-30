@@ -1,4 +1,7 @@
 import os
+import sys
+import string
+import numpy
 
 import cInterface
 
@@ -159,9 +162,11 @@ class Rec(object):
                                            file.byte_ordering, 
                                            file.word_size)
 
-        print "PLACEHOLDER: returning length of raw data"
-        return [len(raw_extra_data)]
-        
+        edu = ExtraDataUnpacker(raw_extra_data, 
+                                file.word_size,
+                                file.byte_ordering)
+        return edu.get_data()
+
     def get_data(self):
         """
         get the data array associated with the record
@@ -179,6 +184,80 @@ class Rec(object):
                                   self.real_hdr,
                                   data_type, 
                                   nwords)
+
+class ExtraDataUnpacker:
+
+    _int_types = {4: numpy.int32, 8: numpy.int64}
+    _float_types = {4: numpy.float32, 8: numpy.float64}
+
+    _codes =  {
+        1  : ('x', float),
+        2  : ('y', float),
+        3  : ('y_domain_lower_bound', float),
+        4  : ('x_domain_lower_bound', float),
+        5  : ('y_domain_upper_bound', float),
+        6  : ('x_domain_upper_bound', float),
+        7  : ('z_domain_lower_bound', float),
+        8  : ('x_domain_upper_bound', float),
+        10 : ('title', str),
+        11 : ('domain_title', str),
+        12 : ('x_lower_bound', float),
+        13 : ('x_upper_bound', float),
+        14 : ('y_lower_bound', float),
+        15 : ('y_upper_bound', float),
+        }
+
+    def __init__(self, raw_extra_data, word_size, byte_ordering):
+        self.rdata = raw_extra_data
+        self.ws = word_size
+        self.itype = self._int_types[word_size]
+        self.ftype = self._float_types[word_size]
+        # byte_ordering is 'little_endian' or 'big_endian'
+        # sys.byteorder is 'little' or 'big'
+        self.is_swapped = not byte_ordering.startswith(sys.byteorder)
+
+    def next_words(self, n):
+        """
+        return next n words as raw data string, and pop them off the 
+        front of the string
+        """
+        pos = n * self.ws
+        rv = self.rdata[:pos]
+        assert(len(rv) == pos)
+        self.rdata = self.rdata[pos:]
+        return rv
+
+    def tweak_string(self, st):
+        """
+        undo byte-swapping of string and remove trailing NULs
+        """
+        if self.is_swapped:
+            # concatenate backwards substrings
+            st = string.join([st[pos : pos + self.ws][::-1]
+                              for pos in range(0, len(st), self.ws)], "")
+        while st.endswith("\x00"):
+            st = st[:-1]
+        return st
+
+    def get_data(self):
+        """
+        get list of (key, value) for extra data
+        """
+        data = []
+        while self.rdata:
+            i = numpy.fromstring(self.next_words(1), self.itype)[0]
+            if i == 0:
+                break
+            ia, ib = (i / 1000, i % 1000)
+            key, type = self._codes[ib]
+            rawvals = self.next_words(ia)
+            if type == float:
+                vals = numpy.fromstring(rawvals, self.ftype)
+            elif type == str:
+                vals = self.tweak_string(rawvals)
+            data.append((key, vals))
+        return data
+            
 
 if __name__ == '__main__':
 
@@ -205,33 +284,35 @@ if __name__ == '__main__':
     f.close_fd()
     
     # also read a record using saved metadata
-    format = f.format
-    byte_ordering = f.byte_ordering
-    word_size = f.word_size
-    myrec = f.vars[0].recs[0]
-    hdr_offset = myrec.hdr_offset
-    data_offset = myrec.data_offset
-    disk_length = myrec.disk_length
-    
-    del(f)
+    if f.vars:
 
-    fnew = File(path,
-                format = format,
-                byte_ordering = byte_ordering,
-                word_size = word_size,
-                parse = False)
+        format = f.format
+        byte_ordering = f.byte_ordering
+        word_size = f.word_size
+        myrec = f.vars[0].recs[0]
+        hdr_offset = myrec.hdr_offset
+        data_offset = myrec.data_offset
+        disk_length = myrec.disk_length
 
-    rnew = Rec.from_file_and_offsets(fnew, hdr_offset, data_offset, disk_length)
-    print "record read using saved file type and offsets:"
-    print "int hdr: %s" % rnew.int_hdr
-    print "real hdr: %s" % rnew.real_hdr
-    print "data: %s" % rnew.get_data()
-    print "extra data: %s" % rnew.get_extra_data()
+        del(f)
 
-    print "nx = %s" % rnew.int_hdr[18]
-    print "ny = %s" % rnew.int_hdr[17]
-    rdata = open("recdata0.txt", "w")
-    for value in rnew.get_data():
-        rdata.write("%s\n" % value)
-    rdata.close()
+        fnew = File(path,
+                    format = format,
+                    byte_ordering = byte_ordering,
+                    word_size = word_size,
+                    parse = False)
+
+        rnew = Rec.from_file_and_offsets(fnew, hdr_offset, data_offset, disk_length)
+        print "record read using saved file type and offsets:"
+        print "int hdr: %s" % rnew.int_hdr
+        print "real hdr: %s" % rnew.real_hdr
+        print "data: %s" % rnew.get_data()
+        print "extra data: %s" % rnew.get_extra_data()
+
+        print "nx = %s" % rnew.int_hdr[18]
+        print "ny = %s" % rnew.int_hdr[17]
+        rdata = open("recdata0.txt", "w")
+        for value in rnew.get_data():
+            rdata.write("%s\n" % value)
+        rdata.close()
 

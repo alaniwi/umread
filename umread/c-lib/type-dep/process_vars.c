@@ -45,7 +45,7 @@ int process_vars(File *file, List *heaplist)
   /* now sort out the list of variables and dimensions */
   CKP(   vars = list_new(heaplist)   );
   CKI(   get_vars(nrec, recs, vars, heaplist)   );
-  /* move the variables from the linked list to the array */
+  /* move the variables from the linked list to the array */  
   CKI(   list_copy_to_ptr_array(vars, &file->nvars, &file->vars, heaplist)   );
   CKI(   list_free(vars, 0, heaplist)   );
   return 0;
