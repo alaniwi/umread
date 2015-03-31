@@ -98,9 +98,14 @@ int get_vars(int nrec, Rec **recs,
       /* we are at end record of a variable at the very end, or if the header
        * shows a difference from the next record which constitutes a different
        * variable
+       *
+       * We also force end record of a variable if the grid type is not
+       * supported; any such records are passed back as single-record
+       * variables for the caller to deal with.
        */
       at_end_rec = ( recno == nrec - 1 ||
-		     records_from_different_vars(recs[recno + 1], rec));
+		     records_from_different_vars(recs[recno + 1], rec) ||
+		     !grid_supported(rec->int_hdr));
       
       /* allow for variables which are unsupported for some reason */
       if (at_start_rec && test_skip_var(rec))
@@ -196,8 +201,12 @@ int test_skip_var(const Rec *rec)
   if (get_var_compression(int_hdr) == 1)
     skip_reason = "compressed field index not supported";
 
-  if (grid_supported(int_hdr) == 0)
-    skip_reason = "grid code not supported";
+  /* remove grid_supported test - now used to split up variables, not to 
+   * exclude them.
+   * 
+   * if (grid_supported(int_hdr) == 0)
+   *  skip_reason = "grid code not supported";
+   */
 
   /* ADD ANY MORE VARIABLE SKIPPING CASES HERE. */
 
