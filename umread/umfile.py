@@ -1,9 +1,7 @@
 import os
-import sys
-import string
-import numpy
 
 import cInterface
+from extraData import ExtraDataUnpacker
 
 class UMFileException(Exception):
     pass
@@ -106,7 +104,44 @@ class Var(object):
         self.nz = nz
         self.nt = nt
         self.supervar_index = supervar_index
+    
+    def _compare_recs_by_extra_data(self, a, b):
+        return cmp(a.get_extra_data(),
+                   b.get_extra_data())
 
+    def _compare_recs_by_orig_order(self, a, b):
+        return cmp(self.recs.index(a), self.recs.index(b))
+
+    def group_records_by_extra_data(self):
+        """
+        Returns a list of (sub)lists of records where each records within each
+        sublist has matching extra data (if any), so if the whole variable has 
+        consistent extra data then the return value will be of length 1.
+        Within each group, the ordering of returned records is the same as in 
+        self.recs
+        """
+        compare = self._compare_recs_by_extra_data
+        recs = self.recs[:]
+        n = len(recs)
+        if n == 0:
+            # shouldn't have a var without records, but...
+            return []
+        recs.sort(compare)
+
+        # optimise simple case - if two ends of a sorted list match, 
+        # the whole list matches
+        if not compare(recs[0], recs[-1]):
+            return [self.recs[:]]
+
+        groups = []
+        this_grp = []
+        for i, rec in enumerate(recs):
+            this_grp.append(rec)
+            if i == n - 1 or compare(rec, recs[i + 1]):
+                this_grp.sort(self._compare_recs_by_orig_order)
+                groups.append(this_grp)
+                this_grp = []
+        return groups
 
 class Rec(object):
     """
@@ -127,6 +162,7 @@ class Rec(object):
         self.hdr_offset = hdr_offset
         self.data_offset = data_offset
         self.disk_length = disk_length
+        self._extra_data = None
         if file:
             self.file = file
 
@@ -144,9 +180,9 @@ class Rec(object):
                                           file.word_size)
         return cls(int_hdr, real_hdr, hdr_offset, data_offset, disk_length, file=file)
 
-    def get_extra_data(self):
+    def read_extra_data(self):
         """
-        get the extra data associated with the record
+        read the extra data associated with the record
         """
         c = self.file.c_interface
         file = self.file
@@ -165,7 +201,17 @@ class Rec(object):
         edu = ExtraDataUnpacker(raw_extra_data, 
                                 file.word_size,
                                 file.byte_ordering)
+
         return edu.get_data()
+
+    def get_extra_data(self):
+        """
+        get extra data associated with the record, either by 
+        reading or using cached read
+        """
+        if self._extra_data == None:
+            self._extra_data = self.read_extra_data()
+        return self._extra_data
 
     def get_data(self):
         """
@@ -185,78 +231,6 @@ class Rec(object):
                                   data_type, 
                                   nwords)
 
-class ExtraDataUnpacker:
-
-    _int_types = {4: numpy.int32, 8: numpy.int64}
-    _float_types = {4: numpy.float32, 8: numpy.float64}
-
-    _codes =  {
-        1  : ('x', float),
-        2  : ('y', float),
-        3  : ('y_domain_lower_bound', float),
-        4  : ('x_domain_lower_bound', float),
-        5  : ('y_domain_upper_bound', float),
-        6  : ('x_domain_upper_bound', float),
-        7  : ('z_domain_lower_bound', float),
-        8  : ('x_domain_upper_bound', float),
-        10 : ('title', str),
-        11 : ('domain_title', str),
-        12 : ('x_lower_bound', float),
-        13 : ('x_upper_bound', float),
-        14 : ('y_lower_bound', float),
-        15 : ('y_upper_bound', float),
-        }
-
-    def __init__(self, raw_extra_data, word_size, byte_ordering):
-        self.rdata = raw_extra_data
-        self.ws = word_size
-        self.itype = self._int_types[word_size]
-        self.ftype = self._float_types[word_size]
-        # byte_ordering is 'little_endian' or 'big_endian'
-        # sys.byteorder is 'little' or 'big'
-        self.is_swapped = not byte_ordering.startswith(sys.byteorder)
-
-    def next_words(self, n):
-        """
-        return next n words as raw data string, and pop them off the 
-        front of the string
-        """
-        pos = n * self.ws
-        rv = self.rdata[:pos]
-        assert(len(rv) == pos)
-        self.rdata = self.rdata[pos:]
-        return rv
-
-    def tweak_string(self, st):
-        """
-        undo byte-swapping of string and remove trailing NULs
-        """
-        if self.is_swapped:
-            # concatenate backwards substrings
-            st = string.join([st[pos : pos + self.ws][::-1]
-                              for pos in range(0, len(st), self.ws)], "")
-        while st.endswith("\x00"):
-            st = st[:-1]
-        return st
-
-    def get_data(self):
-        """
-        get list of (key, value) for extra data
-        """
-        data = []
-        while self.rdata:
-            i = numpy.fromstring(self.next_words(1), self.itype)[0]
-            if i == 0:
-                break
-            ia, ib = (i / 1000, i % 1000)
-            key, type = self._codes[ib]
-            rawvals = self.next_words(ia)
-            if type == float:
-                vals = numpy.fromstring(rawvals, self.ftype)
-            elif type == str:
-                vals = self.tweak_string(rawvals)
-            data.append((key, vals))
-        return data
             
 
 if __name__ == '__main__':
@@ -279,7 +253,12 @@ if __name__ == '__main__':
             print "real hdr: %s" % rec.real_hdr
             print "data: %s" % rec.get_data()
             print "extra_data: %s" % rec.get_extra_data()
+            # if recno == 1:
+            #     rec._extra_data['y'] += .01
+            #     print "massaged_extra_data: %s" % rec.get_extra_data()
             print "-----------------------"
+        print "all records", var.recs
+        print "records grouped by extra data ", var.group_records_by_extra_data()
         print "==============================="
     f.close_fd()
     
