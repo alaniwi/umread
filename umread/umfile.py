@@ -1,4 +1,5 @@
 import os
+import numpy
 
 import cInterface
 from extraData import ExtraDataUnpacker
@@ -40,7 +41,7 @@ class File(object):
         objects will work.
         """
         c = cInterface.CInterface()
-        self.c_interface = c
+        self._c_interface = c
         self.path = path
         self.fd = None
         self.open_fd()
@@ -75,7 +76,7 @@ class File(object):
         self.fd = None
 
     def _detect_file_type(self):
-        c = self.c_interface
+        c = self._c_interface
         file_type_obj = c.detect_file_type(self.fd)
         d = c.file_type_obj_to_dict(file_type_obj)
         self.format = d["format"]
@@ -173,7 +174,7 @@ class Rec(object):
         header and data offsets.  The headers are read in, and 
         also the record object is ready for calling get_data().
         """
-        c = file.c_interface
+        c = file._c_interface
         int_hdr, real_hdr = c.read_header(file.fd,
                                           hdr_offset,
                                           file.byte_ordering,
@@ -184,7 +185,7 @@ class Rec(object):
         """
         read the extra data associated with the record
         """
-        c = self.file.c_interface
+        c = self.file._c_interface
         file = self.file
 
         extra_data_offset, extra_data_length = \
@@ -213,11 +214,23 @@ class Rec(object):
             self._extra_data = self.read_extra_data()
         return self._extra_data
 
+    def get_type_and_num_words(self):
+        """
+        get the data type (as numpy type) and number of words as 2-tuple
+        """
+        c = self.file._c_interface
+        ntype, num_words = c.get_type_and_num_words(self.int_hdr)
+        if ntype == 'integer':
+            dtype = numpy.dtype(file_data_int_type)
+        elif ntype == 'real':
+            dtype = numpy.dtype(file_data_real_type)
+        return ntype, num_words
+
     def get_data(self):
         """
         get the data array associated with the record
         """
-        c = self.file.c_interface
+        c = self.file._c_interface
         file = self.file
         data_type, nwords = c.get_type_and_num_words(self.int_hdr)
         print "data_type = %s nwords = %s" % (data_type, nwords)
