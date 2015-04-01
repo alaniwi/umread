@@ -363,7 +363,7 @@ class CInterface(object):
                                       word_size,
                                       extra_data)
         if rv != 0:
-            raise UMFileException("error reading extra data")
+            raise umfile.UMFileException("error reading extra data")
         
         return extra_data
 
@@ -422,7 +422,7 @@ class CInterface(object):
                                        data)
 
         if rv != 0:
-            raise UMFileException("error reading record data")
+            raise umfile.UMFileException("error reading record data")
         
         return data
 
