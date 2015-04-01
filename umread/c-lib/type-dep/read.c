@@ -349,7 +349,7 @@ int read_record_data_core(int fd,
 			  void *data_return)
 {
   int pack;
-  size_t packed_bytes, ipt;
+  size_t packed_bytes, ipt, packed_words;
   void *packed_data;
   REAL mdi;
 
@@ -440,6 +440,15 @@ int read_record_data_core(int fd,
 	  ERR;
 	  
 	  /* break; */
+
+	case 4:
+	  packed_words = packed_bytes / WORD_SIZE;
+	  if (byte_ordering == REVERSE_ORDERING)
+	    swap_bytes(packed_data, packed_words);
+	  mdi = get_var_real_fill_value(real_hdr);
+	  CKI(   unpack_run_length_encoded(packed_data, packed_words, data_return, nwords, mdi)   );
+	  break;
+
 	default:
 	  SWITCH_BUG;
 	}
@@ -451,4 +460,52 @@ int read_record_data_core(int fd,
   if (packed_data != NULL)
     free(packed_data);
   return -1;
+}
+
+
+int unpack_run_length_encoded(REAL *datain, INTEGER nin, REAL *dataout, INTEGER nout, REAL mdi)
+{
+  REAL *src, *dest, *end_src, *end_dest, data;
+  INTEGER repeat;
+
+  /* some pointers:
+   * src and dest are current positions;
+   * end_src and end_dest are the first position off the end of each array
+   */
+  src = datain;
+  dest = dataout;
+  end_src = src + nin;
+  end_dest = dest + nout;
+
+  /* syntax reminder: *p++ means first dereference p and then increment p
+   */
+  while (src < end_src && dest < end_dest)
+    {
+      data = *src++;
+      if (data != mdi)
+	*dest++ = data;
+      else
+	{
+	  /* check we didn't read the MDI as the last item in the input */
+	  ERRIF(src == end_src);
+
+	  /* read in next word, round to nearest integer, and output MDI that many times 
+	   * while checking we don't go beyond end of output data array
+	   */
+	  for (repeat = (INTEGER)(0.5 + *src++); repeat > 0 && dest < end_dest; repeat--)
+	    *dest++ = mdi;
+
+	  /* check we didn't reach end of output data array with copies of the MDI still to write 
+	   * (or read in a negative repeat count)
+	   */
+	  ERRIF(repeat != 0);
+	}
+    }
+  /* check we reached end of output data,
+   * (not necessarily end of input data - it could be padded)
+   */
+  ERRIF (dest != end_dest);
+
+  return 0;
+  ERRBLKI;
 }
