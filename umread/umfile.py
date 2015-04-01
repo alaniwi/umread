@@ -221,10 +221,10 @@ class Rec(object):
         c = self.file._c_interface
         ntype, num_words = c.get_type_and_num_words(self.int_hdr)
         if ntype == 'integer':
-            dtype = numpy.dtype(file_data_int_type)
+            dtype = numpy.dtype(c.file_data_int_type)
         elif ntype == 'real':
-            dtype = numpy.dtype(file_data_real_type)
-        return ntype, num_words
+            dtype = numpy.dtype(c.file_data_real_type)
+        return dtype, num_words
 
     def get_data(self):
         """
@@ -266,6 +266,7 @@ if __name__ == '__main__':
             print "real hdr: %s" % rec.real_hdr
             print "data: %s" % rec.get_data()
             print "extra_data: %s" % rec.get_extra_data()
+            print "type %s, num words: %s" % rec.get_type_and_num_words()
             # if recno == 1:
             #     rec._extra_data['y'] += .01
             #     print "massaged_extra_data: %s" % rec.get_extra_data()
