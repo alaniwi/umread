@@ -98,6 +98,7 @@ static int is_alternating_zeros_without_offset(int32_t *vals, int num_pairs)
 {
   int i;
   int32_t *p;
+  p = vals;
   for (i = 0; i < num_pairs; i++)
     {
       if (*p != 0) return 0;
@@ -126,7 +127,7 @@ int detect_file_type_(int fd, File_type *file_type)
    * of 4- or 8- byte, and of native or swapped byte ordering
    */
   lseek(fd, 0, SEEK_SET);
-  if(read(fd, data4, 4 * N_PAIRS) != 4 * N_PAIRS) return 1;
+  if(read(fd, data4, 8 * N_PAIRS) != 8 * N_PAIRS) return 1;
 
   memcpy(data8, data4, 16);
 
